@@ -76,7 +76,7 @@ class UndoHistoryTest {
 	void keyCombosParseAndMatch() {
 		KeyCombo redo = KeyCombo.parse("Ctrl+Shift+Z");
 		assertEquals("ctrl+shift+z", redo.toString());
-		assertTrue(redo.matches("z", true, true, false));
-		assertTrue(!redo.matches("z", true, false, false));
+		assertEquals(new KeyCombo("Z", true, true, false), redo);
+		assertTrue(!redo.equals(KeyCombo.parse("ctrl+z")));
 	}
 }

@@ -12,13 +12,15 @@ Supports Minecraft **1.21.11, 26.1.x, 26.2 and 26.3**, one jar per version.
 ./gradlew :26.3:runClientGameTest   # in-game test (see Testing)
 ```
 
+Domain terms are defined in [`CONTEXT.md`](CONTEXT.md).
+
 Gradle runs on Java 25 (set in `gradle/gradle-daemon-jvm.properties`). 1.21.11 jars target Java 21.
 
 ## Project layout
 
 | Folder | What's in it |
 |---|---|
-| `core/` | Pure-Java logic with unit tests: dictionary lookups, suggestions, autocomplete, undo history, settings. No Minecraft code. |
+| `core/` | Pure-Java logic with unit tests, no Minecraft code. `TypingSession` is the entry point: one per screen, it takes key presses and typed characters and reports what to draw. Behind it: spell checker, suggestions, autocomplete, undo history, text layout. |
 | `common/` | Minecraft code shared by every version: screen hooks, drawing the underline and popup, game words, entrypoint. `field/` adapts each kind of text field (text box, sign line, book page). |
 | `common/src/gametest/` | In-game test that plays through chat, a sign and a book (see Testing). |
 | `variants/1.21.11`, `variants/26.x` | Rendering hooks: `GuiGraphics` (1.21.11) vs `GuiGraphicsExtractor` (26.x). 1.21.11 also needs a mixin for typed characters. |

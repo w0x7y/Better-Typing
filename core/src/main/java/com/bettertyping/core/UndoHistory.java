@@ -15,6 +15,9 @@ public final class UndoHistory {
 	static final int MAX_STEPS = 200;
 	static final long GROUP_TIMEOUT_MS = 1_000;
 
+	/** What {@link #observe} found compared to the last known state. */
+	public enum Change { NONE, CURSOR, TEXT }
+
 	private enum Kind { TYPING, DELETING, OTHER }
 
 	private final Deque<TextState> undo = new ArrayDeque<>();
@@ -30,24 +33,25 @@ public final class UndoHistory {
 		lastKind = null;
 	}
 
+	/** The last known state of the field, or null before the first {@link #observe}. */
 	public TextState current() {
 		return current;
 	}
 
-	/** Records whatever changed since the last observed state. */
-	public void observe(TextState now, long timeMs) {
+	/** Records whatever changed since the last known state. The first call only remembers the state. */
+	public Change observe(TextState now, long timeMs) {
 		if (current == null) {
 			reset(now);
-			return;
+			return Change.NONE;
 		}
 		if (now.equals(current)) {
-			return;
+			return Change.NONE;
 		}
 		if (now.text().equals(current.text())) {
 			// Cursor moved: keep the newest cursor, but don't merge the next edit into the previous step.
 			current = now;
 			lastKind = null;
-			return;
+			return Change.CURSOR;
 		}
 		Kind kind = classify(current, now);
 		boolean merge = kind != Kind.OTHER && kind == lastKind && timeMs - lastTime < GROUP_TIMEOUT_MS
@@ -59,6 +63,7 @@ public final class UndoHistory {
 		current = now;
 		lastKind = kind;
 		lastTime = timeMs;
+		return Change.TEXT;
 	}
 
 	/** Records an edit made by the mod itself (an accepted suggestion) as its own step. */
@@ -69,6 +74,22 @@ public final class UndoHistory {
 		}
 		current = now;
 		lastKind = null;
+	}
+
+	/**
+	 * Replaces the current state without making an undo step, for when the field didn't take a state
+	 * exactly as given (e.g. text too wide for a sign line).
+	 */
+	public void settle(TextState actual) {
+		current = actual;
+		lastKind = null;
+		// A refused undo/redo leaves the field where it was; don't keep a step that would change nothing.
+		if (actual.equals(undo.peek())) {
+			undo.pop();
+		}
+		if (actual.equals(redo.peek())) {
+			redo.pop();
+		}
 	}
 
 	public Optional<TextState> undo() {

@@ -2,6 +2,7 @@ package com.bettertyping.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -75,6 +76,29 @@ class SpellCheckerTest {
 		assertFalse(checker.isCorrect("gg'ez"));
 		checker.addPersonalWord("gg'ez");
 		assertTrue(checker.isCorrect("gg'ez"));
+	}
+
+	@Test
+	void misspellingsRefreshWhenAWordSourceChanges() throws IOException {
+		SpellChecker checker = checker();
+		assertEquals(List.of("netherite"), checker.misspelled("netherite ingot").stream().map(WordSpan::text).toList());
+		checker.setGameWords(WordList.caseInsensitive(List.of("Netherite"), 5_000));
+		assertEquals(List.of(), checker.misspelled("netherite ingot"));
+	}
+
+	@Test
+	void wordAddedWhileSavingFailsStillCountsAndIsNotUnderlined() throws IOException {
+		Path blocker = tmp.resolve("blocker");
+		Files.writeString(blocker, "a file where a folder should be");
+		PersonalDictionary personal = new PersonalDictionary(blocker.resolve("personal.txt"));
+		personal.load();
+		SpellChecker checker = new SpellChecker(personal);
+		checker.setLanguage(english);
+		assertEquals(1, checker.misspelled("zqxw").size());
+
+		assertThrows(IOException.class, () -> checker.addPersonalWord("zqxw"));
+		assertTrue(checker.isCorrect("zqxw"));
+		assertEquals(List.of(), checker.misspelled("zqxw"));
 	}
 
 	@Test

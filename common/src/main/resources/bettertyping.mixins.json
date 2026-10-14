@@ -10,6 +10,7 @@
 		"EditBoxAccessor",
 		"MultiLineEditBoxAccessor",
 		"MultilineTextFieldAccessor",
+		"ScreenSessionMixin",
 		"SignEditScreenAccessor",
 		"TextAreaWidgetInvoker"
 	],

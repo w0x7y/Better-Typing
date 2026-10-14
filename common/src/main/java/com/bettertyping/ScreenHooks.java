@@ -1,21 +1,16 @@
 package com.bettertyping;
 
+import com.bettertyping.core.KeyCombo;
 import com.bettertyping.core.Popup;
-import com.bettertyping.core.Settings;
-import com.bettertyping.core.TextState;
-import com.bettertyping.core.TypingAssistant;
-import com.bettertyping.core.WordSpan;
+import com.bettertyping.core.TextLayout;
+import com.bettertyping.core.TypingSession;
 import com.bettertyping.field.Field;
 import com.bettertyping.field.ScreenFields;
 import com.bettertyping.version.KeyCodes;
 import com.bettertyping.version.VersionBridge;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.io.UncheckedIOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -23,7 +18,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.language.I18n;
 
-/** Connects open screens to a {@link TypingAssistant} for each of their text fields. */
+/** Connects each screen's text fields to its {@link TypingSession}: input goes in, squiggles and the popup come out. */
 public final class ScreenHooks {
 	private static final int UNDERLINE_COLOR = 0xFFFF5555;
 	private static final int POPUP_BACKGROUND = 0xF0101018;
@@ -36,94 +31,43 @@ public final class ScreenHooks {
 	private static final int PADDING = 4;
 	private static final String KEY_PREFIX = "key.keyboard.";
 
-	private static final Map<Screen, ScreenState> SCREENS = new WeakHashMap<>();
-
-	/** A screen's assistants by field key, and which field was typed in last. */
-	private static final class ScreenState {
-		final Map<Object, TypingAssistant> assistants = new HashMap<>();
-		Object lastFocused;
-	}
-
-	private record Focus(Field field, TypingAssistant assistant) {
-	}
-
 	private ScreenHooks() {
 	}
 
+	/** Called after every screen (re)initializes. Fabric clears a screen's hooks on each init, so they're registered again. */
 	static void attach(Screen screen) {
+		TypingScreen typing = (TypingScreen) screen;
+		if (typing.bettertyping$session() == null) {
+			typing.bettertyping$setSession(new TypingSession(BetterTyping.checker(), BetterTyping.settings()));
+		}
+		// Item and mob names exist (and are translated) once a world is loaded; the language can only change between screens.
+		if (Minecraft.getInstance().level != null) {
+			GameWords.refreshIfNeeded(BetterTyping.checker());
+		}
 		ScreenKeyboardEvents.allowKeyPress(screen).register((s, event) -> !onKey(s, event));
 		VersionBridge.registerScreen(screen);
 	}
 
-	private static ScreenState state(Screen screen) {
-		return SCREENS.computeIfAbsent(screen, s -> new ScreenState());
-	}
-
-	private static TypingAssistant assistant(Screen screen, Field field) {
-		return state(screen).assistants.computeIfAbsent(field.key(),
-			key -> new TypingAssistant(BetterTyping.checker(), BetterTyping.settings()));
-	}
-
-	private static Focus focus(Screen screen, ScreenFields fields) {
-		if (fields == null) {
-			return null;
-		}
-		Field field = fields.focused();
-		if (field.assist()) {
-			GameWords.refreshIfNeeded(BetterTyping.checker());
-		}
-		// Moving to another field (sign line, book page) closes the popup left open in the old one.
-		ScreenState state = state(screen);
-		if (!Objects.equals(state.lastFocused, field.key())) {
-			TypingAssistant previous = state.assistants.get(state.lastFocused);
-			if (previous != null) {
-				previous.onEscape();
-			}
-			state.lastFocused = field.key();
-		}
-		return new Focus(field, assistant(screen, field));
-	}
-
 	/** Returns true when the key was used and must not reach the screen. */
 	public static boolean onKey(Screen screen, KeyEvent event) {
-		Focus focus = focus(screen, ScreenFields.find(screen));
-		if (focus == null) {
+		ScreenFields fields = ScreenFields.find(screen);
+		TypingSession session = ((TypingScreen) screen).bettertyping$session();
+		if (fields == null || session == null) {
 			return false;
 		}
-		long now = System.currentTimeMillis();
-		Settings settings = BetterTyping.settings();
-		boolean ctrl = event.hasControlDownWithQuirk();
-		boolean shift = event.hasShiftDown();
-		boolean alt = event.hasAltDown();
-		if (settings.undoRedo) {
-			String key = keyName(event);
-			if (settings.undoKey.matches(key, ctrl, shift, alt)) {
-				return focus.assistant().undo(focus.field().target(), now);
-			}
-			if (settings.redoKey.matches(key, ctrl, shift, alt) || settings.redoAltKey.matches(key, ctrl, shift, alt)) {
-				return focus.assistant().redo(focus.field().target(), now);
-			}
-		}
-		if (event.isCycleFocus() && !ctrl && !shift && !alt) {
-			return focus.assistant().onTab(focus.field().target(), focus.field().assist(), now);
-		}
-		if (event.isEscape()) {
-			return focus.assistant().onEscape();
-		}
-		return false;
+		KeyCombo pressed = new KeyCombo(keyName(event), event.hasControlDownWithQuirk(), event.hasShiftDown(), event.hasAltDown());
+		return session.onKey(fields.focused(), pressed, System.currentTimeMillis());
 	}
 
 	/** Returns true when the character was used and must not be typed. */
 	public static boolean onChar(Screen screen, int codepoint) {
-		if (codepoint != ' ') {
-			return false;
-		}
-		Focus focus = focus(screen, ScreenFields.find(screen));
-		if (focus == null) {
+		ScreenFields fields = ScreenFields.find(screen);
+		TypingSession session = ((TypingScreen) screen).bettertyping$session();
+		if (fields == null || session == null) {
 			return false;
 		}
 		try {
-			return focus.assistant().onSpace(focus.field().target(), focus.field().assist(), System.currentTimeMillis());
+			return session.onChar(fields.focused(), codepoint, System.currentTimeMillis());
 		} catch (UncheckedIOException e) {
 			BetterTyping.LOGGER.error("Couldn't save the personal dictionary", e);
 			return true;
@@ -133,30 +77,21 @@ public final class ScreenHooks {
 	/** Draws red squiggles under misspelled words and the suggestion popup. */
 	public static void render(Screen screen, Canvas canvas) {
 		ScreenFields fields = ScreenFields.find(screen);
-		Focus focus = focus(screen, fields);
-		if (focus == null) {
+		TypingSession session = ((TypingScreen) screen).bettertyping$session();
+		if (fields == null || session == null) {
 			return;
 		}
-		focus.assistant().sync(focus.field().target(), focus.field().assist(), System.currentTimeMillis());
-
-		for (Field field : fields.all()) {
-			if (!field.assist()) {
-				continue;
-			}
-			TextState state = field.target().state();
-			int cursor = field == focus.field() ? state.cursor() : -1;
-			for (WordSpan word : assistant(screen, field).misspelled(state.text(), cursor, true)) {
-				for (Field.Segment segment : field.segments(word.start(), word.end())) {
-					squiggle(canvas, segment.x1(), segment.x2(), segment.bottom());
-				}
+		TypingSession.Overlay<Field> overlay = session.overlay(fields.all(), fields.focused(), System.currentTimeMillis());
+		for (TypingSession.Misspelling<Field> misspelling : overlay.misspellings()) {
+			for (TextLayout.Segment segment : misspelling.field().segments(misspelling.word().start(), misspelling.word().end())) {
+				squiggle(canvas, segment.x1(), segment.x2(), segment.bottom());
 			}
 		}
-
-		Popup popup = focus.assistant().popup();
+		Popup popup = overlay.popup();
 		if (popup != null) {
-			List<Field.Segment> anchor = focus.field().segments(popup.word().start(), popup.word().end());
-			if (!anchor.isEmpty()) {
-				drawPopup(canvas, Minecraft.getInstance().font, popup, anchor.get(0), screen.width, screen.height);
+			List<TextLayout.Segment> word = fields.focused().segments(popup.word().start(), popup.word().end());
+			if (!word.isEmpty()) {
+				drawPopup(canvas, Minecraft.getInstance().font, popup, word.get(0), screen.width, screen.height);
 			}
 		}
 	}
@@ -169,7 +104,7 @@ public final class ScreenHooks {
 	}
 
 	/** Draws the popup above the word, or below it when there's no room above. */
-	private static void drawPopup(Canvas canvas, Font font, Popup popup, Field.Segment word, int screenWidth, int screenHeight) {
+	private static void drawPopup(Canvas canvas, Font font, Popup popup, TextLayout.Segment word, int screenWidth, int screenHeight) {
 		List<Popup.Item> items = popup.items();
 		String[] labels = new String[items.size()];
 		int width = 0;
@@ -181,10 +116,10 @@ public final class ScreenHooks {
 		width += PADDING * 2;
 		int height = items.size() * ROW_HEIGHT + 2;
 		int x = Math.max(0, Math.min(word.x1() - PADDING, screenWidth - width));
-		int y = word.top() - height - 3;
-		if (y < 0) {
-			y = Math.min(word.bottom() + 3, screenHeight - height);
-		}
+		int above = word.top() - height - 3;
+		int below = word.bottom() + 3;
+		// Neither fits on a tiny screen: stay above rather than slide over the word.
+		int y = above >= 0 || below + height > screenHeight ? Math.max(0, above) : below;
 
 		canvas.nextStratum();
 		canvas.fill(x, y, x + width, y + height, POPUP_BORDER);
@@ -200,7 +135,7 @@ public final class ScreenHooks {
 		}
 	}
 
-	/** Lowercase key name for shortcuts: a letter/digit as typed on the current layout, else Minecraft's key name. */
+	/** Lowercase key name: a letter/digit as typed on the current layout, else Minecraft's key name without its prefix. */
 	private static String keyName(KeyEvent event) {
 		int c = KeyCodes.shortcutChar(event);
 		if (c >= 0) {

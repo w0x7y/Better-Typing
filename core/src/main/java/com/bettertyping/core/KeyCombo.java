@@ -5,7 +5,8 @@ import java.util.Locale;
 /**
  * A keyboard shortcut such as {@code ctrl+shift+z}. The key is a lowercase name: a letter or digit
  * ({@code z}, {@code 7}) or a Minecraft key name without its prefix ({@code f5}, {@code tab}).
- * "ctrl" means Cmd on macOS, like vanilla's copy/paste shortcuts.
+ * "ctrl" means Cmd on macOS, like vanilla's copy/paste shortcuts. A pressed key is a combo too, so
+ * matching a shortcut is plain equality.
  */
 public record KeyCombo(String key, boolean ctrl, boolean shift, boolean alt) {
 	public KeyCombo {
@@ -31,10 +32,6 @@ public record KeyCombo(String key, boolean ctrl, boolean shift, boolean alt) {
 			throw new IllegalArgumentException("No key in shortcut: " + text);
 		}
 		return new KeyCombo(key, ctrl, shift, alt);
-	}
-
-	public boolean matches(String pressedKey, boolean ctrlDown, boolean shiftDown, boolean altDown) {
-		return key.equals(pressedKey) && ctrl == ctrlDown && shift == shiftDown && alt == altDown;
 	}
 
 	@Override

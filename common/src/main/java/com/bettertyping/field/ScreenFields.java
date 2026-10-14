@@ -16,7 +16,10 @@ import net.minecraft.client.gui.screens.inventory.AnvilScreen;
 import net.minecraft.client.gui.screens.inventory.BookEditScreen;
 import net.minecraft.client.gui.screens.inventory.BookSignScreen;
 
-/** The text fields of a screen: all of them (for underlines) and the one being typed in. */
+/**
+ * The text fields of a screen: all of them (for underlines) and the one being typed in. This is the only
+ * place that decides which fields get spell check and autocomplete.
+ */
 public record ScreenFields(List<Field> all, Field focused) {
 	/** Null when the screen has no field to help with. */
 	public static ScreenFields find(Screen screen) {
@@ -24,7 +27,7 @@ public record ScreenFields(List<Field> all, Field focused) {
 			// Sign screens send every key to the current line, whatever widget has focus.
 			List<Field> lines = new ArrayList<>(4);
 			for (int i = 0; i < 4; i++) {
-				lines.add(new SignLineField(sign, i));
+				lines.add(new SignLineField(sign, i, true));
 			}
 			return new ScreenFields(lines, lines.get(((SignEditScreenAccessor) sign).bettertyping$line()));
 		}
@@ -34,7 +37,7 @@ public record ScreenFields(List<Field> all, Field focused) {
 			if (page == null || !page.isFocused() || !page.visible) {
 				return null;
 			}
-			Field field = new BookPageField(page, fields.bettertyping$currentPage());
+			Field field = new BookPageField(page, fields.bettertyping$currentPage(), true);
 			return new ScreenFields(List.of(field), field);
 		}
 		if (screen.getFocused() instanceof EditBox box && box.canConsumeInput() && box.isVisible()) {

@@ -3,72 +3,115 @@ package com.bettertyping.core;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 /**
  * Checks words against the language dictionary, game names (items, mobs) and the personal dictionary.
- * All sources can be swapped at any time from another thread, e.g. when a dictionary finishes loading.
+ *
+ * <p>Any source can be replaced at any time from any thread, e.g. when the dictionary finishes loading.
+ * Until a language is set, every word counts as correct and nothing is reported as misspelled.
  */
 public final class SpellChecker {
 	private static final int MAX_DISTANCE = 2;
+	private static final int CACHED_TEXTS = 32;
 	private static final Comparator<WordList.Candidate> BY_DISTANCE_THEN_RANK =
 		Comparator.comparingInt(WordList.Candidate::distance).thenComparingInt(WordList.Candidate::rank);
 	private static final Comparator<WordList.Candidate> BY_RANK = Comparator.comparingInt(WordList.Candidate::rank);
 
+	/** Every word source in use. Replaced as a whole when one changes, so readers always see a consistent set. */
+	private record Sources(WordList language, WordList gameWords, WordList personal) {
+		boolean isCorrect(String word) {
+			return language == null || language.contains(word) || gameWords.contains(word) || personal.contains(word);
+		}
+
+		List<WordList> lists() {
+			return language == null ? List.of(gameWords, personal) : List.of(language, gameWords, personal);
+		}
+	}
+
 	private final PersonalDictionary personal;
-	private volatile WordList language;
-	private volatile WordList gameWords = WordList.EMPTY;
-	private volatile int version;
+	private volatile Sources sources;
+	/** Misspelled words per text, valid for {@link #cachedFor} only. */
+	private final Map<String, List<WordSpan>> misspelledCache = new LinkedHashMap<>(16, 0.75F, true) {
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<String, List<WordSpan>> eldest) {
+			return size() > CACHED_TEXTS;
+		}
+	};
+	private Sources cachedFor;
 
 	public SpellChecker(PersonalDictionary personal) {
 		this.personal = personal;
+		this.sources = new Sources(null, WordList.EMPTY, personal.words());
 	}
 
-	public PersonalDictionary personal() {
-		return personal;
-	}
-
-	/** Null while the dictionary is still loading; nothing is flagged until it's ready. */
 	public void setLanguage(WordList language) {
-		this.language = language;
-		version++;
-	}
-
-	public boolean isReady() {
-		return language != null;
+		update(s -> new Sources(language, s.gameWords(), s.personal()));
 	}
 
 	public void setGameWords(WordList gameWords) {
-		this.gameWords = gameWords;
-		version++;
+		update(s -> new Sources(s.language(), gameWords, s.personal()));
 	}
 
+	/** Adds a word to the personal dictionary. It counts as correct even if saving the file fails. */
 	public void addPersonalWord(String word) throws IOException {
-		personal.add(word);
-		version++;
+		try {
+			personal.add(word);
+		} finally {
+			update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
+		}
 	}
 
 	public void removePersonalWord(String word) throws IOException {
-		personal.remove(word);
-		version++;
+		try {
+			personal.remove(word);
+		} finally {
+			update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
+		}
 	}
 
-	/** Changes whenever any word source changes, so cached results can be refreshed. */
-	public int version() {
-		return version;
+	private synchronized void update(UnaryOperator<Sources> change) {
+		sources = change.apply(sources);
+	}
+
+	public boolean isReady() {
+		return sources.language() != null;
 	}
 
 	public boolean isCorrect(String word) {
-		WordList lang = language;
-		return lang == null || lang.contains(word) || gameWords.contains(word) || personal.contains(word);
+		return sources.isCorrect(word);
+	}
+
+	/** The misspelled words of {@code text}. Results are cached until any word source changes. */
+	public synchronized List<WordSpan> misspelled(String text) {
+		Sources current = sources;
+		if (current.language() == null) {
+			return List.of();
+		}
+		if (current != cachedFor) {
+			misspelledCache.clear();
+			cachedFor = current;
+		}
+		return misspelledCache.computeIfAbsent(text, t -> {
+			List<WordSpan> found = new ArrayList<>();
+			for (WordSpan word : Tokenizer.words(t)) {
+				if (!current.isCorrect(word.text())) {
+					found.add(word);
+				}
+			}
+			return List.copyOf(found);
+		});
 	}
 
 	/** Up to {@code limit} corrections for a misspelled word, closest and most common first. */
 	public List<String> suggest(String word, int limit) {
 		List<WordList.Candidate> candidates = new ArrayList<>();
-		for (WordList list : sources()) {
+		for (WordList list : sources.lists()) {
 			list.collectSuggestions(word, MAX_DISTANCE, candidates);
 		}
 		candidates.sort(BY_DISTANCE_THEN_RANK);
@@ -78,22 +121,11 @@ public final class SpellChecker {
 	/** Up to {@code limit} words that start with {@code prefix}, most common first. */
 	public List<String> complete(String prefix, int limit) {
 		List<WordList.Candidate> candidates = new ArrayList<>();
-		for (WordList list : sources()) {
+		for (WordList list : sources.lists()) {
 			list.collectCompletions(prefix, candidates);
 		}
 		candidates.sort(BY_RANK);
 		return top(candidates, prefix, limit);
-	}
-
-	private List<WordList> sources() {
-		List<WordList> lists = new ArrayList<>(3);
-		WordList lang = language;
-		if (lang != null) {
-			lists.add(lang);
-		}
-		lists.add(gameWords);
-		lists.add(personal.words());
-		return lists;
 	}
 
 	private static List<String> top(List<WordList.Candidate> sorted, String typed, int limit) {
