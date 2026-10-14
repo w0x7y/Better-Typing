@@ -28,6 +28,8 @@ words people say in chat come first, so `hel` gives hello, help and held, and `c
 
 lines starting with `/` are left alone, so tab still completes commands and player names
 
+on a sign, when the list would cover a line you wrote, it goes below the word or beside the text instead
+
 **undo and redo**
 
 **ctrl+z** undoes, **ctrl+shift+z** and **ctrl+y** redo, in every text field. typing is undone a word at a time, an accepted suggestion is its own step. every sign line and book page keeps its own history. on macos ctrl is cmd, like vanilla's copy and paste
@@ -51,7 +53,6 @@ they're saved to `config/bettertyping/settings.properties` and `config/bettertyp
 **not there yet**
 
 - [ ] more languages and british spelling as downloads
-- [ ] on signs and in books the list can cover the line above
 
 **[building](./versions)**
 

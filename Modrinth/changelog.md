@@ -1,5 +1,1 @@
-- Settings screen: open it with /bettertyping or from Mod Menu. Turn spell check, autocomplete and undo/redo on or off, change the shortcuts and edit your personal dictionary
-- Autocomplete puts words common in chat first: "hel" now gives hello, help and held
-- Chat words like gg, afk, lol and brb are no longer underlined
-- The mod now has an icon in Mod Menu
-- Needs YetAnotherConfigLib
+- On a sign, when the suggestion list would cover a line you wrote, it now goes below the word or beside the text instead

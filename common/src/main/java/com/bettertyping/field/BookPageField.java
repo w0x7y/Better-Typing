@@ -47,6 +47,11 @@ record BookPageField(MultiLineEditBox box, int page, boolean assist) implements 
 		field.setSelecting(false);
 	}
 
+	@Override
+	public boolean keepClear() {
+		return false;
+	}
+
 	/** Wraps the text the same way the text box does, keeping the lines that aren't scrolled out of view. */
 	@Override
 	public List<TextLayout.Line> lines() {

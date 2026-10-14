@@ -2,6 +2,7 @@ package com.bettertyping;
 
 import com.bettertyping.core.KeyCombo;
 import com.bettertyping.core.Popup;
+import com.bettertyping.core.PopupPlacement;
 import com.bettertyping.core.TextLayout;
 import com.bettertyping.core.TypingSession;
 import com.bettertyping.field.Field;
@@ -10,6 +11,7 @@ import com.bettertyping.version.KeyCodes;
 import com.bettertyping.version.VersionBridge;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.minecraft.client.Minecraft;
@@ -26,7 +28,6 @@ public final class ScreenHooks {
 	private static final int TEXT = 0xFFAAAAAA;
 	private static final int TEXT_HIGHLIGHT = 0xFFFFFF00;
 	private static final int ROW_HEIGHT = 12;
-	private static final int POPUP_GAP = 3;
 	private static final String KEY_PREFIX = "key.keyboard.";
 
 	private ScreenHooks() {
@@ -89,9 +90,20 @@ public final class ScreenHooks {
 		if (popup != null) {
 			List<TextLayout.Segment> word = fields.focused().segments(popup.word().start(), popup.word().end());
 			if (!word.isEmpty()) {
-				drawPopup(canvas, Minecraft.getInstance().font, popup, word.get(0), screen.width, screen.height);
+				drawPopup(canvas, Minecraft.getInstance().font, popup, word.get(0), text(fields), screen.width, screen.height);
 			}
 		}
+	}
+
+	/** Where the visible text the popup should stay off is. */
+	private static List<TextLayout.Segment> text(ScreenFields fields) {
+		List<TextLayout.Segment> text = new ArrayList<>();
+		for (Field field : fields.all()) {
+			if (field.keepClear()) {
+				text.addAll(field.segments(0, field.state().text().length()));
+			}
+		}
+		return text;
 	}
 
 	private static void squiggle(Canvas canvas, int x1, int x2, int y) {
@@ -101,8 +113,9 @@ public final class ScreenHooks {
 		}
 	}
 
-	/** Draws the popup above the word, or below it when there's no room above. */
-	private static void drawPopup(Canvas canvas, Font font, Popup popup, TextLayout.Segment word, int screenWidth, int screenHeight) {
+	/** Draws the popup next to the word, off the text around it (see {@link PopupPlacement}). */
+	private static void drawPopup(Canvas canvas, Font font, Popup popup, TextLayout.Segment word, List<TextLayout.Segment> text,
+		int screenWidth, int screenHeight) {
 		List<Popup.Item> items = popup.items();
 		String[] labels = new String[items.size()];
 		int width = 0;
@@ -113,12 +126,9 @@ public final class ScreenHooks {
 		}
 		width += 1;
 		int height = items.size() * ROW_HEIGHT;
-		// Like vanilla, the text lines up with the word and the box starts one pixel to its left.
-		int x = Math.max(0, Math.min(word.x1(), screenWidth - width) - 1);
-		int above = word.top() - height - POPUP_GAP;
-		int below = word.bottom() + POPUP_GAP;
-		// Neither fits on a tiny screen: stay above rather than slide over the word.
-		int y = above >= 0 || below + height > screenHeight ? Math.max(0, above) : below;
+		PopupPlacement.Position position = PopupPlacement.place(word, width, height, text, screenWidth, screenHeight);
+		int x = position.x();
+		int y = position.y();
 
 		canvas.nextStratum();
 		canvas.fill(x, y, x + width, y + height, POPUP_BACKGROUND);

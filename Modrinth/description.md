@@ -31,6 +31,8 @@ Words people say in chat come first, so `hel` gives hello, help and held, and `c
 
 Lines starting with `/` are left alone, so Tab still completes commands and player names.
 
+On a sign, when the list would cover a line you wrote, it goes below the word or beside the text instead.
+
 ## Undo and redo
 
 **Ctrl+Z** undoes, **Ctrl+Shift+Z** and **Ctrl+Y** redo, in every text field. Typing is undone a word at a

@@ -11,6 +11,11 @@ public interface Field extends TypingField {
 	/** Where the field draws its text right now, one entry per visible line. */
 	List<TextLayout.Line> lines();
 
+	/** Whether the suggestion list moves off this field's text. A book page's list stays by its word, over the page. */
+	default boolean keepClear() {
+		return true;
+	}
+
 	/** Screen rectangles covering characters {@code [start, end)}; empty if they're scrolled out of view. */
 	default List<TextLayout.Segment> segments(int start, int end) {
 		Font font = Minecraft.getInstance().font;

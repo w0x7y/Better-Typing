@@ -12,7 +12,7 @@
 
 **Misspelling**: a word not found in any word source. Underlined with a red squiggle, except the word being typed at the cursor, until it's finished.
 
-**Suggestion list** (popup): the list above a word. *Autocomplete* lists appear while typing, with nothing highlighted; *spelling* lists open with Tab on a misspelling, first row highlighted, plus "Add to dictionary". Tab moves the highlight, Space accepts it, Escape closes the list.
+**Suggestion list** (popup): the list next to a word. It goes above the word like vanilla's command suggestions; where that would cover another line of a sign it goes below the word or beside the text instead. *Autocomplete* lists appear while typing, with nothing highlighted; *spelling* lists open with Tab on a misspelling, first row highlighted, plus "Add to dictionary". Tab moves the highlight, Space accepts it, Escape closes the list.
 
 **Undo step**: what one Ctrl+Z reverts: a typed word with the spaces after it, a run of deletions, a paste, or one accepted suggestion.
 
