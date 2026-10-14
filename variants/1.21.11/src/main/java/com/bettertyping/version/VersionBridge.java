@@ -25,7 +25,7 @@ public final class VersionBridge {
 
 			@Override
 			public void text(Font font, String text, int x, int y, int color) {
-				graphics.drawString(font, text, x, y, color, false);
+				graphics.drawString(font, text, x, y, color, true);
 			}
 
 			@Override

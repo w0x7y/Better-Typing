@@ -21,14 +21,12 @@ import net.minecraft.client.resources.language.I18n;
 /** Connects each screen's text fields to its {@link TypingSession}: input goes in, squiggles and the popup come out. */
 public final class ScreenHooks {
 	private static final int UNDERLINE_COLOR = 0xFFFF5555;
-	private static final int POPUP_BACKGROUND = 0xF0101018;
-	private static final int POPUP_BORDER = 0xFF505064;
-	private static final int ROW_HIGHLIGHT = 0xFF34345A;
-	private static final int TEXT = 0xFFE0E0E0;
-	private static final int TEXT_HIGHLIGHT = 0xFFFFFF55;
-	private static final int TEXT_ADD = 0xFF9A9AAA;
+	// The popup copies vanilla's command suggestion list (CommandSuggestions.SuggestionsList).
+	private static final int POPUP_BACKGROUND = 0xD0000000;
+	private static final int TEXT = 0xFFAAAAAA;
+	private static final int TEXT_HIGHLIGHT = 0xFFFFFF00;
 	private static final int ROW_HEIGHT = 12;
-	private static final int PADDING = 4;
+	private static final int POPUP_GAP = 3;
 	private static final String KEY_PREFIX = "key.keyboard.";
 
 	private ScreenHooks() {
@@ -113,25 +111,20 @@ public final class ScreenHooks {
 			labels[i] = item.addToDictionary() ? I18n.get("bettertyping.popup.add_to_dictionary", item.text()) : item.text();
 			width = Math.max(width, font.width(labels[i]));
 		}
-		width += PADDING * 2;
-		int height = items.size() * ROW_HEIGHT + 2;
-		int x = Math.max(0, Math.min(word.x1() - PADDING, screenWidth - width));
-		int above = word.top() - height - 3;
-		int below = word.bottom() + 3;
+		width += 1;
+		int height = items.size() * ROW_HEIGHT;
+		// Like vanilla, the text lines up with the word and the box starts one pixel to its left.
+		int x = Math.max(0, Math.min(word.x1(), screenWidth - width) - 1);
+		int above = word.top() - height - POPUP_GAP;
+		int below = word.bottom() + POPUP_GAP;
 		// Neither fits on a tiny screen: stay above rather than slide over the word.
 		int y = above >= 0 || below + height > screenHeight ? Math.max(0, above) : below;
 
 		canvas.nextStratum();
-		canvas.fill(x, y, x + width, y + height, POPUP_BORDER);
-		canvas.fill(x + 1, y + 1, x + width - 1, y + height - 1, POPUP_BACKGROUND);
+		canvas.fill(x, y, x + width, y + height, POPUP_BACKGROUND);
 		for (int i = 0; i < items.size(); i++) {
-			int rowY = y + 1 + i * ROW_HEIGHT;
-			boolean highlighted = i == popup.selected();
-			if (highlighted) {
-				canvas.fill(x + 1, rowY, x + width - 1, rowY + ROW_HEIGHT, ROW_HIGHLIGHT);
-			}
-			int color = highlighted ? TEXT_HIGHLIGHT : items.get(i).addToDictionary() ? TEXT_ADD : TEXT;
-			canvas.text(font, labels[i], x + PADDING, rowY + 2, color);
+			int rowY = y + i * ROW_HEIGHT;
+			canvas.text(font, labels[i], x + 1, rowY + 2, i == popup.selected() ? TEXT_HIGHLIGHT : TEXT);
 		}
 	}
 
