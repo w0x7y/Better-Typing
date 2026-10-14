@@ -1,0 +1,32 @@
+name: Delete Modrinth versions
+
+# Removes every upload of one mod version from Modrinth, e.g. 0.1.0. This can't be undone.
+on:
+  workflow_dispatch:
+    inputs:
+      mod_version:
+        description: Mod version to delete from Modrinth, e.g. 0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.x'
+      - name: Delete the versions
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MOD_VERSION: ${{ inputs.mod_version }}
+        run: python3 tools/modrinth_versions.py --delete "$MOD_VERSION"

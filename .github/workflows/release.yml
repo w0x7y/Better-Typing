@@ -50,3 +50,10 @@ jobs:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           DRY_RUN: ${{ github.ref_type != 'tag' && inputs.dry_run }}
         run: ./gradlew modrinth -Pmodrinth_dry_run="$DRY_RUN" --stacktrace
+
+      # Minotaur can't set where the mod runs, so every version is marked client-only afterwards.
+      - name: Mark the versions as client-only
+        if: github.ref_type == 'tag' || !inputs.dry_run
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: python3 tools/modrinth_versions.py --environment
