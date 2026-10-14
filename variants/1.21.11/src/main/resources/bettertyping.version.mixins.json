@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "com.bettertyping.version.mixin",
+	"compatibilityLevel": "JAVA_${java_version}",
+	"client": [
+		"KeyboardHandlerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

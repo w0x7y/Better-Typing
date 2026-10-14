@@ -1,0 +1,29 @@
+// Pure-Java logic with no Minecraft dependency. Its sources are compiled into every version's jar.
+plugins {
+	id 'java'
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	testImplementation platform('org.junit:junit-bom:5.13.4')
+	testImplementation 'org.junit.jupiter:junit-jupiter'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	// Lowest Java version among supported Minecraft versions (1.21.11).
+	it.options.release = 21
+}
+
+test {
+	useJUnitPlatform()
+}

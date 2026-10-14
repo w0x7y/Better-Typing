@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "bettertyping",
+	"version": "${version}",
+	"name": "Better Typing",
+	"description": "Spell check, autocomplete and undo/redo in every text field.",
+	"authors": [
+		"Idan Gilboa"
+	],
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.bettertyping.BetterTyping"
+		]
+	},
+	"mixins": [
+		"bettertyping.mixins.json",
+		"bettertyping.version.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "${minecraft_dependency}",
+		"java": ">=${java_version}",
+		"fabric-api": "*"
+	}
+}

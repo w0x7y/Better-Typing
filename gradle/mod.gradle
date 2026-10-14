@@ -1,0 +1,79 @@
+// Applied by every versions/<mc>/build.gradle. Reads per-version values from that folder's gradle.properties.
+apply plugin: project.loom_plugin
+
+def remap = project.loom_plugin == 'net.fabricmc.fabric-loom-remap'
+def javaVersion = project.java_version as int
+
+version = "${project.mod_version}+${project.name}"
+
+base {
+	archivesName = 'better-typing'
+}
+
+repositories {
+	maven {
+		name = 'TerraformersMC'
+		url = 'https://maven.terraformersmc.com/releases/'
+	}
+}
+
+sourceSets {
+	main {
+		// core + common are shared by all versions; each variant holds code for a group of versions
+		// that share an API (rendering, key codes).
+		java.srcDirs += [rootProject.file('core/src/main/java'), rootProject.file('common/src/main/java')]
+		resources.srcDirs += [rootProject.file('common/src/main/resources')]
+		project.variants.split(',').each { name ->
+			java.srcDirs += rootProject.file("variants/${name.trim()}/src/main/java")
+			resources.srcDirs += rootProject.file("variants/${name.trim()}/src/main/resources")
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	if (remap) {
+		mappings loom.officialMojangMappings()
+		modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+		modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+		modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+		modLocalRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+	} else {
+		implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+		implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+		compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+		localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+	}
+}
+
+loom {
+	runs {
+		configureEach {
+			// Share one run folder per version so worlds and options survive rebuilds.
+			runDir = "../../run/${project.name}"
+		}
+	}
+}
+
+processResources {
+	def props = [
+		version: project.version,
+		minecraft_dependency: project.minecraft_dependency,
+		java_version: javaVersion,
+	]
+	inputs.properties props
+
+	filesMatching(['fabric.mod.json', '*.mixins.json']) {
+		expand props
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = javaVersion
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+}

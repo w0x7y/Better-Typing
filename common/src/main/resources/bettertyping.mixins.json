@@ -1,0 +1,13 @@
+{
+	"required": true,
+	"package": "com.bettertyping.mixin",
+	"compatibilityLevel": "JAVA_${java_version}",
+	"client": [
+		"AnvilScreenAccessor",
+		"ChatScreenAccessor",
+		"EditBoxAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
