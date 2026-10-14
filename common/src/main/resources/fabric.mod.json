@@ -15,7 +15,8 @@
 	},
 	"mixins": [
 		"bettertyping.mixins.json",
-		"bettertyping.version.mixins.json"
+		"bettertyping.version.mixins.json",
+		"bettertyping.sign.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.5",

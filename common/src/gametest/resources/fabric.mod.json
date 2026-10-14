@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "bettertyping-test",
+	"version": "1.0.0",
+	"name": "Better Typing tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"com.bettertyping.test.BetterTypingClientGameTest"
+		]
+	},
+	"depends": {
+		"bettertyping": "*"
+	}
+}

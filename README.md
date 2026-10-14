@@ -9,6 +9,7 @@ Supports Minecraft **1.21.11, 26.1.x, 26.2 and 26.3**, one jar per version.
 ./gradlew :26.3:build           # one version
 ./gradlew :26.3:runClient       # dev client (worlds and options kept in run/26.3)
 ./gradlew :core:test            # unit tests for the logic
+./gradlew :26.3:runClientGameTest   # in-game test (see Testing)
 ```
 
 Gradle runs on Java 25 (set in `gradle/gradle-daemon-jvm.properties`). 1.21.11 jars target Java 21.
@@ -18,9 +19,11 @@ Gradle runs on Java 25 (set in `gradle/gradle-daemon-jvm.properties`). 1.21.11 j
 | Folder | What's in it |
 |---|---|
 | `core/` | Pure-Java logic with unit tests: dictionary lookups, suggestions, autocomplete, undo history, settings. No Minecraft code. |
-| `common/` | Minecraft code shared by every version: screen hooks, drawing the underline and popup, game words, entrypoint. |
+| `common/` | Minecraft code shared by every version: screen hooks, drawing the underline and popup, game words, entrypoint. `field/` adapts each kind of text field (text box, sign line, book page). |
+| `common/src/gametest/` | In-game test that plays through chat, a sign and a book (see Testing). |
 | `variants/1.21.11`, `variants/26.x` | Rendering hooks: `GuiGraphics` (1.21.11) vs `GuiGraphicsExtractor` (26.x). 1.21.11 also needs a mixin for typed characters. |
 | `variants/keys-glfw`, `variants/keys-sdl` | Shortcut key codes: GLFW up to 26.2, SDL from 26.3. |
+| `variants/upto-26.1`, `variants/from-26.2` | Small API changes in 26.2: the sign text scale type and where the open screen is stored. |
 | `versions/<mc>/` | One Gradle project per Minecraft version. `gradle.properties` picks the versions of Minecraft, Fabric API and Mod Menu, plus which variants to use. |
 | `tools/build_dictionary.py` | Rebuilds the bundled word list (see below). |
 
@@ -28,19 +31,18 @@ Gradle runs on Java 25 (set in `gradle/gradle-daemon-jvm.properties`). 1.21.11 j
 
 | Feature | State |
 |---|---|
-| Spell check underline + Tab suggestions | Done for chat and anvil rename |
-| Autocomplete | Done for chat and anvil rename |
-| Undo / redo | Done for every single-line text field |
+| Spell check underline + Tab suggestions | Done: chat, anvil rename, signs, books (pages and title) |
+| Autocomplete | Done: chat, anvil rename, signs, books (pages and title) |
+| Undo / redo | Done: every single-line text field, signs (per line), books (per page) |
 | Item and mob names count as correct | Done (current game language, includes modded) |
 | Personal dictionary | Done (`config/bettertyping/personal_dictionary.txt`) |
-| Signs, books | Not started |
 | Settings screen, Mod Menu button, `/bettertyping` command, rebinding UI | Not started. Shortcuts can be changed in `config/bettertyping/settings.properties` meanwhile. |
 | Language downloads | Not started |
 
 ## Behaviour
 
-Spell check and autocomplete: chat (not commands), anvil rename, signs, books.
-Undo/redo: every text field.
+Spell check and autocomplete: chat (not commands), anvil rename, signs, book pages and book titles.
+Undo/redo: every text field. Each sign line and each book page has its own undo history.
 
 ### Spell check
 - Misspelled words get a red squiggly underline. The word you're still typing isn't underlined until you move past it.
@@ -73,8 +75,18 @@ Same controls for spell-check suggestions and autocomplete:
 - All three shortcuts can be rebound in the mod's settings menu.
 - Vanilla's Controls screen only binds single keys, so these combos need the mod's own rebinding UI.
 
+### Known quirks
+- Autocomplete ranks words by how often they appear in books, so chat words rank lower than you might expect: "hel" suggests held/help/helped before "hello".
+- On signs and in books, the popup can cover the line above the word.
+
 ### Settings menu
 - Opened from Mod Menu (optional dependency) or with the `/bettertyping` client command.
+
+## Testing
+
+- `./gradlew :core:test` runs the unit tests for the logic (dictionary, suggestions, autocomplete, undo).
+- `./gradlew :<mc>:runClientGameTest` opens the game, creates a world and plays through chat, a sign and a book, checking the text after every step (20 checks). Screenshots of the underlines and popups go to `run/<mc>/screenshots/`.
+- Ctrl shortcuts in the in-game test are sent straight to the mod's key handler: on 26.3, Fabric's test input holds Ctrl but doesn't set the modifier flags on the next key event, which a real keyboard always does.
 
 ## Word list
 
@@ -86,6 +98,7 @@ The bundled English dictionary (`common/src/main/resources/assets/bettertyping/d
 ### Licenses
 - **ESDB:** MIT-style. Commercial use, modification and redistribution are allowed. Keep Kevin Atkinson's copyright notice in the mod jar and the docs.
 - **gwordlist / Google Books Ngram counts:** Creative Commons Attribution 3.0. Commercial use allowed; credit is required.
+- Both notices are in [`THIRD_PARTY_NOTICES.txt`](common/src/main/resources/THIRD_PARTY_NOTICES.txt), which ships at the root of every jar. Keep it there, and include it (or the Credits section below) on the mod's download page.
 - Stay at size 70 or smaller: lists larger than 80 pull in the UK Advanced Cryptics Dictionary, which requires including its notice word for word. Don't use Australian (`AU`) data without adding its separate notice.
 - British spellings ("colour") are flagged by default and will come as a separate download from the language menu.
 
@@ -99,3 +112,12 @@ python3 tools/build_dictionary.py --esdb-lists wl-35.txt wl-40.txt wl-50.txt wl-
   --frequency frequency-alpha-alldicts.txt --max-size 60 \
   --out common/src/main/resources/assets/bettertyping/dictionaries/en_us.txt
 ```
+
+## Credits
+
+The English dictionary is built from:
+
+- **SCOWL / English Speller Database** by Kevin Atkinson (<https://github.com/en-wl/wordlist>). Copyright 2000-2026 by Kevin Atkinson. Permission to use, copy, modify, distribute, and sell any part of SCOWLv2, or word lists created from it, is hereby granted without fee, provided that the above copyright notice appears in all copies and that both the above copyright notice and this notice appear in supporting documentation. Kevin Atkinson makes no representations about the suitability of this database for any purpose. It is provided "as is" without express or implied warranty.
+- **gwordlist** by hackerb9 (<https://github.com/hackerb9/gwordlist>), compiled from the Google Books Ngram dataset by Google, licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Used only to sort the words by frequency.
+
+Full notices: [`THIRD_PARTY_NOTICES.txt`](common/src/main/resources/THIRD_PARTY_NOTICES.txt).

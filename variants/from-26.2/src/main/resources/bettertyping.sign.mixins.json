@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "com.bettertyping.version.signmixin",
+	"compatibilityLevel": "JAVA_${java_version}",
+	"client": [
+		"SignScaleInvoker"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

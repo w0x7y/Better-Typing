@@ -46,6 +46,23 @@ dependencies {
 	}
 }
 
+// In-game tests: ./gradlew :<mc>:runClientGameTest (opens a game window, screenshots go to build/run/clientGameTest).
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = 'bettertyping-test'
+		enableGameTests = false
+		eula = true
+	}
+}
+
+sourceSets {
+	gametest {
+		java.srcDirs += rootProject.file('common/src/gametest/java')
+		resources.srcDirs += rootProject.file('common/src/gametest/resources')
+	}
+}
+
 loom {
 	runs {
 		configureEach {

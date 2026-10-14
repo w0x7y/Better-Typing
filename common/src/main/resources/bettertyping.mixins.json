@@ -4,8 +4,14 @@
 	"compatibilityLevel": "JAVA_${java_version}",
 	"client": [
 		"AnvilScreenAccessor",
+		"BookEditScreenAccessor",
+		"BookSignScreenAccessor",
 		"ChatScreenAccessor",
-		"EditBoxAccessor"
+		"EditBoxAccessor",
+		"MultiLineEditBoxAccessor",
+		"MultilineTextFieldAccessor",
+		"SignEditScreenAccessor",
+		"TextAreaWidgetInvoker"
 	],
 	"injectors": {
 		"defaultRequire": 1

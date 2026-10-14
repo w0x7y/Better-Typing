@@ -2,28 +2,28 @@ package com.bettertyping;
 
 import com.bettertyping.core.Popup;
 import com.bettertyping.core.Settings;
+import com.bettertyping.core.TextState;
 import com.bettertyping.core.TypingAssistant;
 import com.bettertyping.core.WordSpan;
-import com.bettertyping.mixin.AnvilScreenAccessor;
-import com.bettertyping.mixin.ChatScreenAccessor;
-import com.bettertyping.mixin.EditBoxAccessor;
+import com.bettertyping.field.Field;
+import com.bettertyping.field.ScreenFields;
 import com.bettertyping.version.KeyCodes;
 import com.bettertyping.version.VersionBridge;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.io.UncheckedIOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.AnvilScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.language.I18n;
 
-/** Connects open screens to a {@link TypingAssistant} for their focused text field. */
+/** Connects open screens to a {@link TypingAssistant} for each of their text fields. */
 public final class ScreenHooks {
 	private static final int UNDERLINE_COLOR = 0xFFFF5555;
 	private static final int POPUP_BACKGROUND = 0xF0101018;
@@ -36,13 +36,18 @@ public final class ScreenHooks {
 	private static final int PADDING = 4;
 	private static final String KEY_PREFIX = "key.keyboard.";
 
-	private static final Map<EditBox, TypingAssistant> ASSISTANTS = new WeakHashMap<>();
+	private static final Map<Screen, ScreenState> SCREENS = new WeakHashMap<>();
 
-	private ScreenHooks() {
+	/** A screen's assistants by field key, and which field was typed in last. */
+	private static final class ScreenState {
+		final Map<Object, TypingAssistant> assistants = new HashMap<>();
+		Object lastFocused;
 	}
 
-	/** The focused field, its assistant, and whether spell check/autocomplete apply to it. */
-	private record Focus(EditBox box, EditBoxTarget target, TypingAssistant assistant, boolean assist) {
+	private record Focus(Field field, TypingAssistant assistant) {
+	}
+
+	private ScreenHooks() {
 	}
 
 	static void attach(Screen screen) {
@@ -50,30 +55,38 @@ public final class ScreenHooks {
 		VersionBridge.registerScreen(screen);
 	}
 
-	private static Focus focus(Screen screen) {
-		if (!(screen.getFocused() instanceof EditBox box) || !box.canConsumeInput()) {
-			return null;
-		}
-		boolean assist = isAssistField(screen, box);
-		if (assist) {
-			GameWords.refreshIfNeeded(BetterTyping.checker());
-		}
-		TypingAssistant assistant = ASSISTANTS.computeIfAbsent(box,
-			b -> new TypingAssistant(BetterTyping.checker(), BetterTyping.settings()));
-		return new Focus(box, new EditBoxTarget(box), assistant, assist);
+	private static ScreenState state(Screen screen) {
+		return SCREENS.computeIfAbsent(screen, s -> new ScreenState());
 	}
 
-	/** Spell check and autocomplete run in chat (except commands) and the anvil name field. */
-	private static boolean isAssistField(Screen screen, EditBox box) {
-		if (screen instanceof ChatScreen chat && ((ChatScreenAccessor) chat).bettertyping$input() == box) {
-			return !box.getValue().startsWith("/");
+	private static TypingAssistant assistant(Screen screen, Field field) {
+		return state(screen).assistants.computeIfAbsent(field.key(),
+			key -> new TypingAssistant(BetterTyping.checker(), BetterTyping.settings()));
+	}
+
+	private static Focus focus(Screen screen, ScreenFields fields) {
+		if (fields == null) {
+			return null;
 		}
-		return screen instanceof AnvilScreen anvil && ((AnvilScreenAccessor) anvil).bettertyping$name() == box;
+		Field field = fields.focused();
+		if (field.assist()) {
+			GameWords.refreshIfNeeded(BetterTyping.checker());
+		}
+		// Moving to another field (sign line, book page) closes the popup left open in the old one.
+		ScreenState state = state(screen);
+		if (!Objects.equals(state.lastFocused, field.key())) {
+			TypingAssistant previous = state.assistants.get(state.lastFocused);
+			if (previous != null) {
+				previous.onEscape();
+			}
+			state.lastFocused = field.key();
+		}
+		return new Focus(field, assistant(screen, field));
 	}
 
 	/** Returns true when the key was used and must not reach the screen. */
-	static boolean onKey(Screen screen, KeyEvent event) {
-		Focus focus = focus(screen);
+	public static boolean onKey(Screen screen, KeyEvent event) {
+		Focus focus = focus(screen, ScreenFields.find(screen));
 		if (focus == null) {
 			return false;
 		}
@@ -85,14 +98,14 @@ public final class ScreenHooks {
 		if (settings.undoRedo) {
 			String key = keyName(event);
 			if (settings.undoKey.matches(key, ctrl, shift, alt)) {
-				return focus.assistant().undo(focus.target(), now);
+				return focus.assistant().undo(focus.field().target(), now);
 			}
 			if (settings.redoKey.matches(key, ctrl, shift, alt) || settings.redoAltKey.matches(key, ctrl, shift, alt)) {
-				return focus.assistant().redo(focus.target(), now);
+				return focus.assistant().redo(focus.field().target(), now);
 			}
 		}
 		if (event.isCycleFocus() && !ctrl && !shift && !alt) {
-			return focus.assistant().onTab(focus.target(), focus.assist(), now);
+			return focus.assistant().onTab(focus.field().target(), focus.field().assist(), now);
 		}
 		if (event.isEscape()) {
 			return focus.assistant().onEscape();
@@ -105,12 +118,12 @@ public final class ScreenHooks {
 		if (codepoint != ' ') {
 			return false;
 		}
-		Focus focus = focus(screen);
+		Focus focus = focus(screen, ScreenFields.find(screen));
 		if (focus == null) {
 			return false;
 		}
 		try {
-			return focus.assistant().onSpace(focus.target(), focus.assist(), System.currentTimeMillis());
+			return focus.assistant().onSpace(focus.field().target(), focus.field().assist(), System.currentTimeMillis());
 		} catch (UncheckedIOException e) {
 			BetterTyping.LOGGER.error("Couldn't save the personal dictionary", e);
 			return true;
@@ -119,39 +132,32 @@ public final class ScreenHooks {
 
 	/** Draws red squiggles under misspelled words and the suggestion popup. */
 	public static void render(Screen screen, Canvas canvas) {
-		Focus focus = focus(screen);
-		if (focus == null || !focus.box().isVisible()) {
+		ScreenFields fields = ScreenFields.find(screen);
+		Focus focus = focus(screen, fields);
+		if (focus == null) {
 			return;
 		}
-		TypingAssistant assistant = focus.assistant();
-		assistant.sync(focus.target(), focus.assist(), System.currentTimeMillis());
+		focus.assistant().sync(focus.field().target(), focus.field().assist(), System.currentTimeMillis());
 
-		EditBox box = focus.box();
-		EditBoxAccessor fields = (EditBoxAccessor) box;
-		Font font = fields.bettertyping$font();
-		String value = box.getValue();
-		int displayPos = Math.min(fields.bettertyping$displayPos(), value.length());
-		int textX = fields.bettertyping$textX();
-		int textY = fields.bettertyping$textY();
-		String shown = font.plainSubstrByWidth(value.substring(displayPos), box.getInnerWidth());
-		int shownEnd = displayPos + shown.length();
-
-		List<WordSpan> misspelled = assistant.misspelled(value, box.getCursorPosition(), focus.assist());
-		for (WordSpan word : misspelled) {
-			int start = Math.max(word.start(), displayPos);
-			int end = Math.min(word.end(), shownEnd);
-			if (start < end) {
-				int x1 = textX + font.width(value.substring(displayPos, start));
-				int x2 = textX + font.width(value.substring(displayPos, end));
-				squiggle(canvas, x1, x2, textY + font.lineHeight);
+		for (Field field : fields.all()) {
+			if (!field.assist()) {
+				continue;
+			}
+			TextState state = field.target().state();
+			int cursor = field == focus.field() ? state.cursor() : -1;
+			for (WordSpan word : assistant(screen, field).misspelled(state.text(), cursor, true)) {
+				for (Field.Segment segment : field.segments(word.start(), word.end())) {
+					squiggle(canvas, segment.x1(), segment.x2(), segment.bottom());
+				}
 			}
 		}
 
-		Popup popup = assistant.popup();
+		Popup popup = focus.assistant().popup();
 		if (popup != null) {
-			int wordStart = Math.max(popup.word().start(), displayPos);
-			int anchorX = textX + font.width(value.substring(displayPos, Math.min(wordStart, shownEnd)));
-			drawPopup(canvas, font, popup, anchorX, box.getY(), box.getY() + box.getHeight(), screen.width, screen.height);
+			List<Field.Segment> anchor = focus.field().segments(popup.word().start(), popup.word().end());
+			if (!anchor.isEmpty()) {
+				drawPopup(canvas, Minecraft.getInstance().font, popup, anchor.get(0), screen.width, screen.height);
+			}
 		}
 	}
 
@@ -162,8 +168,8 @@ public final class ScreenHooks {
 		}
 	}
 
-	private static void drawPopup(Canvas canvas, Font font, Popup popup, int anchorX, int fieldTop, int fieldBottom,
-		int screenWidth, int screenHeight) {
+	/** Draws the popup above the word, or below it when there's no room above. */
+	private static void drawPopup(Canvas canvas, Font font, Popup popup, Field.Segment word, int screenWidth, int screenHeight) {
 		List<Popup.Item> items = popup.items();
 		String[] labels = new String[items.size()];
 		int width = 0;
@@ -174,10 +180,10 @@ public final class ScreenHooks {
 		}
 		width += PADDING * 2;
 		int height = items.size() * ROW_HEIGHT + 2;
-		int x = Math.max(0, Math.min(anchorX - PADDING, screenWidth - width));
-		int y = fieldTop - height - 2;
+		int x = Math.max(0, Math.min(word.x1() - PADDING, screenWidth - width));
+		int y = word.top() - height - 3;
 		if (y < 0) {
-			y = Math.min(fieldBottom + 2, screenHeight - height);
+			y = Math.min(word.bottom() + 3, screenHeight - height);
 		}
 
 		canvas.nextStratum();
