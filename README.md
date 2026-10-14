@@ -112,4 +112,4 @@ both ship in every jar as [THIRD_PARTY_NOTICES.txt](common/src/main/resources/TH
 
 </details>
 
-_credits: [english speller database](https://github.com/en-wl/wordlist) by kevin atkinson, [gwordlist](https://github.com/hackerb9/gwordlist) by hackerb9_
+_credits: [english speller database](https://github.com/en-wl/wordlist) by kevin atkinson, [gwordlist](https://github.com/hackerb9/gwordlist) by hackerb9. license: [mit](./LICENSE)_

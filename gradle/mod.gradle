@@ -94,3 +94,7 @@ java {
 		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
+
+jar {
+	from(rootProject.file('LICENSE'))
+}
