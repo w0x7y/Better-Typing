@@ -1,4 +1,4 @@
-"""Preview the Modrinth project page; use --apply to upload the gallery and update the summary, body and license.
+"""Preview the Modrinth project page; use --apply to upload the icon and gallery and update the summary, body and license.
 
 Gallery images are matched by title: ones already on the page are left alone, so running it twice
 doesn't upload duplicates. In Modrinth/description.md, `gallery:<title>` stands for that image's URL.
@@ -23,6 +23,9 @@ def load(root: Path = ROOT) -> tuple[dict, list[dict], str]:
     project = json.loads((root / "Modrinth/project.json").read_text(encoding="utf-8"))
     if not 3 <= len(project["summary"]) <= 255:
         raise ValueError("The summary must be 3 to 255 characters")
+    icon = root / project["icon"]
+    if icon.suffix != ".png" or icon.stat().st_size > 256 * 1024:
+        raise ValueError(f"{project['icon']} must be a png under 256 KiB")
     gallery = json.loads((root / "Modrinth/gallery.json").read_text(encoding="utf-8"))
     titles = [item["title"] for item in gallery]
     if len(set(titles)) != len(titles):
@@ -51,6 +54,8 @@ def apply(project: dict, gallery: list[dict], body: str, token: str, root: Path 
     if not token.strip():
         raise ValueError("Set MODRINTH_TOKEN with the PROJECT_WRITE scope")
     slug = urllib.parse.quote(project["id"])
+    request("PATCH", f"/project/{slug}/icon?ext=png", token, (root / project["icon"]).read_bytes(), "image/png")
+    print(f"Uploaded {project['icon']} as the project icon")
     live = request("GET", f"/project/{slug}", token)
     existing = {image["title"]: image["url"] for image in live["gallery"]}
     for ordering, item in enumerate(gallery):

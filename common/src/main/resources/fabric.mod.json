@@ -8,6 +8,7 @@
 		"Idan Gilboa"
 	],
 	"license": "MIT",
+	"icon": "assets/bettertyping/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": [

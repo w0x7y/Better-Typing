@@ -1,5 +1,6 @@
 {
   "id": "better-typing",
   "license": "MIT",
+  "icon": "assets/icon.png",
   "summary": "Spell check, autocomplete and Ctrl+Z for chat, signs, books and anvils. Suggestions look just like vanilla's command suggestions. Client-side Fabric mod."
 }
