@@ -11,4 +11,8 @@ public final class Screens {
 	public static Screen current(Minecraft client) {
 		return client.screen;
 	}
+
+	public static void open(Minecraft client, Screen screen) {
+		client.setScreen(screen);
+	}
 }

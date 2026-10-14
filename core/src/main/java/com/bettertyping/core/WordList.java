@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,6 +23,7 @@ import java.util.Map;
  */
 public final class WordList {
 	public static final WordList EMPTY = new WordList(Map.of(), false);
+	static final int CHAT_SPACING = 3;
 
 	private final boolean caseSensitive;
 	private final Map<String, Integer> exact;
@@ -59,18 +61,47 @@ public final class WordList {
 
 	/** A case-sensitive list where each line is a word and the line number is its rank. */
 	public static WordList fromRankedLines(InputStream in) throws IOException {
-		Map<String, Integer> ranks = new HashMap<>();
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-			String line;
-			int rank = 0;
-			while ((line = reader.readLine()) != null) {
-				String word = Tokenizer.normalize(line.strip());
-				if (!word.isEmpty()) {
-					ranks.putIfAbsent(word, rank++);
-				}
+		return new WordList(readRanked(in), true);
+	}
+
+	/**
+	 * A language dictionary (ranked lines) with the words of {@code chatWords} moved up. The dictionary
+	 * is ranked by how often words appear in books, which rarely say "hello" or "thanks", so the n-th
+	 * chat word ranks at least as high as the dictionary's (n * {@value #CHAT_SPACING})-th word. Chat words
+	 * the dictionary lacks ("gg", "afk") count as correct. Blank lines and {@code #} comments are skipped.
+	 */
+	public static WordList language(InputStream dictionary, InputStream chatWords) throws IOException {
+		Map<String, Integer> ranks = readRanked(dictionary);
+		int position = 0;
+		for (String word : readLines(chatWords)) {
+			if (!word.startsWith("#")) {
+				ranks.merge(word, position++ * CHAT_SPACING, Math::min);
 			}
 		}
 		return new WordList(ranks, true);
+	}
+
+	private static Map<String, Integer> readRanked(InputStream in) throws IOException {
+		Map<String, Integer> ranks = new HashMap<>();
+		for (String word : readLines(in)) {
+			ranks.put(word, ranks.size());
+		}
+		return ranks;
+	}
+
+	/** The non-blank lines, normalized, without duplicates. */
+	private static Collection<String> readLines(InputStream in) throws IOException {
+		Collection<String> lines = new LinkedHashSet<>();
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				String word = Tokenizer.normalize(line.strip());
+				if (!word.isEmpty()) {
+					lines.add(word);
+				}
+			}
+		}
+		return lines;
 	}
 
 	public static WordList caseSensitive(Map<String, Integer> ranks) {

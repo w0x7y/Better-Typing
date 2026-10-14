@@ -17,7 +17,9 @@ import org.junit.jupiter.api.io.TempDir;
 /** Runs against the real bundled English dictionary. */
 class SpellCheckerTest {
 	static final Path DICTIONARY = Path.of("../common/src/main/resources/assets/bettertyping/dictionaries/en_us.txt");
+	static final Path CHAT_WORDS = Path.of("../common/src/main/resources/assets/bettertyping/dictionaries/en_us.chat.txt");
 	static WordList english;
+	static WordList englishWithChat;
 
 	@TempDir
 	Path tmp;
@@ -27,13 +29,20 @@ class SpellCheckerTest {
 		try (InputStream in = Files.newInputStream(DICTIONARY)) {
 			english = WordList.fromRankedLines(in);
 		}
+		try (InputStream in = Files.newInputStream(DICTIONARY); InputStream chat = Files.newInputStream(CHAT_WORDS)) {
+			englishWithChat = WordList.language(in, chat);
+		}
 	}
 
 	private SpellChecker checker() throws IOException {
+		return checker(english);
+	}
+
+	private SpellChecker checker(WordList language) throws IOException {
 		PersonalDictionary personal = new PersonalDictionary(tmp.resolve("personal.txt"));
 		personal.load();
 		SpellChecker checker = new SpellChecker(personal);
-		checker.setLanguage(english);
+		checker.setLanguage(language);
 		return checker;
 	}
 
@@ -59,6 +68,18 @@ class SpellCheckerTest {
 	void completesWithCommonWordsFirst() throws IOException {
 		List<String> completions = checker().complete("th", 3);
 		assertEquals(List.of("the", "that", "this"), completions);
+	}
+
+	@Test
+	void chatWordsComeFirstWithoutPushingOutTheMostCommonWords() throws IOException {
+		SpellChecker checker = checker(englishWithChat);
+		assertEquals(List.of("hello", "help", "held"), checker.complete("hel", 3));
+		assertEquals(List.of("the", "that", "this"), checker.complete("th", 3));
+		assertEquals("please", checker.complete("pl", 3).get(0));
+		assertTrue(checker.isCorrect("gg"));
+		assertTrue(checker.isCorrect("AFK"));
+		assertFalse(checker.isCorrect("teh"));
+		assertEquals("the", checker.suggest("teh", 3).get(0));
 	}
 
 	@Test

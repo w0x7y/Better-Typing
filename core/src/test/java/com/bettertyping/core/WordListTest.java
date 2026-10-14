@@ -4,6 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -25,6 +30,21 @@ class WordListTest {
 	@Test
 	void treatsCurlyApostropheAsStraight() {
 		assertTrue(list.contains("don’t"));
+	}
+
+	@Test
+	void chatWordsMoveUpAndCountAsCorrect() throws IOException {
+		WordList language = WordList.language(lines("the", "of", "and", "held", "help", "hello"), lines("# greetings", "hello", "", "gg"));
+		List<WordList.Candidate> completions = new ArrayList<>();
+		language.collectCompletions("hel", completions);
+		completions.sort((a, b) -> Integer.compare(a.rank(), b.rank()));
+		assertEquals(List.of("hello", "held", "help"), completions.stream().map(WordList.Candidate::word).toList());
+		assertTrue(language.contains("gg"));
+		assertFalse(language.contains("# greetings"));
+	}
+
+	private static InputStream lines(String... lines) {
+		return new ByteArrayInputStream(String.join("\n", lines).getBytes(StandardCharsets.UTF_8));
 	}
 
 	@Test

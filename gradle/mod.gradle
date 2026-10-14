@@ -16,6 +16,21 @@ repositories {
 		name = 'TerraformersMC'
 		url = 'https://maven.terraformersmc.com/releases/'
 	}
+	// YetAnotherConfigLib's newest builds are only on Modrinth.
+	maven {
+		name = 'Modrinth'
+		url = 'https://api.modrinth.com/maven'
+		content {
+			includeGroup 'maven.modrinth'
+		}
+	}
+	maven {
+		name = 'Quilt'
+		url = 'https://maven.quiltmc.org/repository/release/'
+		content {
+			includeGroup 'org.quiltmc.parsers'
+		}
+	}
 }
 
 sourceSets {
@@ -37,11 +52,16 @@ dependencies {
 		mappings loom.officialMojangMappings()
 		modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 		modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+		modImplementation "maven.modrinth:yacl:${project.yacl_version}"
 		modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 		modLocalRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+		// YACL bundles its JSON library, but a remapped dev client doesn't load bundled jars.
+		localRuntime "org.quiltmc.parsers:json:0.2.1"
+		localRuntime "org.quiltmc.parsers:gson:0.2.1"
 	} else {
 		implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 		implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+		implementation "maven.modrinth:yacl:${project.yacl_version}"
 		compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 		localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 	}
@@ -78,6 +98,8 @@ processResources {
 		version: project.version,
 		minecraft_dependency: project.minecraft_dependency,
 		java_version: javaVersion,
+		// The YACL build compiled against is the oldest one the jar accepts.
+		yacl_min_version: project.yacl_version.split('\\+')[0],
 	]
 	inputs.properties props
 
@@ -115,5 +137,6 @@ modrinth {
 	debugMode = providers.gradleProperty('modrinth_dry_run').map { it.toBoolean() }.orElse(false)
 	dependencies {
 		required.project 'fabric-api'
+		required.project 'yacl'
 	}
 }

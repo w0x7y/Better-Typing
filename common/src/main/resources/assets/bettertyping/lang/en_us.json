@@ -1,3 +1,27 @@
 {
-	"bettertyping.popup.add_to_dictionary": "Add \"%s\" to dictionary"
+	"bettertyping.name": "Better Typing",
+	"bettertyping.popup.add_to_dictionary": "Add \"%s\" to dictionary",
+	"bettertyping.settings.typing": "Typing",
+	"bettertyping.settings.spell_check": "Spell check",
+	"bettertyping.settings.spell_check.description": "Underline misspelled words in red. Put the cursor on one and press Tab for suggestions.",
+	"bettertyping.settings.autocomplete": "Autocomplete",
+	"bettertyping.settings.autocomplete.description": "Suggest words while you type. Tab picks one, Space takes it.",
+	"bettertyping.settings.undo_redo": "Undo and redo",
+	"bettertyping.settings.undo_redo.description": "Undo and redo in every text field, with the shortcuts below.",
+	"bettertyping.settings.shortcut.undo": "Undo shortcut",
+	"bettertyping.settings.shortcut.undo.description": "Undoes the last word, deletion, paste or accepted suggestion.",
+	"bettertyping.settings.shortcut.redo": "Redo shortcut",
+	"bettertyping.settings.shortcut.redo.description": "Brings back what undo took away.",
+	"bettertyping.settings.shortcut.redo_alt": "Second redo shortcut",
+	"bettertyping.settings.shortcut.redo_alt.description": "Redo also works with this one, like Ctrl+Y in most programs.",
+	"bettertyping.settings.shortcut.description": "Ctrl means Cmd on macOS.",
+	"bettertyping.settings.shortcut.ctrl": "Ctrl",
+	"bettertyping.settings.shortcut.shift": "Shift",
+	"bettertyping.settings.shortcut.alt": "Alt",
+	"bettertyping.settings.shortcut.key": "Key",
+	"bettertyping.settings.shortcut.key.description": "Letters and digits follow your keyboard layout. Tab, Space, Enter and Escape are taken.",
+	"bettertyping.settings.dictionary": "Dictionary",
+	"bettertyping.settings.language": "Language: English (US). More languages and British spelling will be downloadable here.",
+	"bettertyping.settings.personal_dictionary": "Personal dictionary",
+	"bettertyping.settings.personal_dictionary.description": "Words that are never underlined. \"Add to dictionary\" in the spelling list puts words here."
 }

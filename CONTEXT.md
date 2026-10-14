@@ -8,6 +8,8 @@
 
 **Word sources**: what counts as a correct word: the language dictionary, game words (item and mob names in the game's language) and the personal dictionary (words the player added). Replaced as one snapshot whenever any of them changes.
 
+**Chat words**: a language's list of words common in Minecraft chat (`en_us.chat.txt`), most common first. Part of the language dictionary: they rank higher than their book frequency, and the ones the dictionary lacks ("gg", "afk") count as correct.
+
 **Misspelling**: a word not found in any word source. Underlined with a red squiggle, except the word being typed at the cursor, until it's finished.
 
 **Suggestion list** (popup): the list above a word. *Autocomplete* lists appear while typing, with nothing highlighted; *spelling* lists open with Tab on a misspelling, first row highlighted, plus "Add to dictionary". Tab moves the highlight, Space accepts it, Escape closes the list.

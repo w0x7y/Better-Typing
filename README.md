@@ -4,7 +4,7 @@ spell check, autocomplete and ctrl+z for minecraft
 
 <img width="440" alt="spelling suggestions in chat" src="assets/spelling.png" />
 
-a client-side fabric mod for **1.21.11, 26.1, 26.2 and 26.3**. it works in chat, anvil renaming, signs and books, and draws its suggestions the way vanilla draws command suggestions
+a client-side fabric mod for **1.21.11, 26.1, 26.2 and 26.3**. it works in chat, anvil renaming, signs and books, and draws its suggestions the way vanilla draws command suggestions. it needs fabric api and [yetanotherconfiglib](https://modrinth.com/mod/yacl)
 
 **spell check**
 
@@ -17,6 +17,8 @@ put the cursor on one and press **tab**: 3 suggestions show up above it, plus "a
 <img width="270" alt="autocomplete in chat" src="assets/autocomplete.png" />
 
 after 2 letters, up to 3 words for the one you're typing show up above the field. accepting one adds a space after it, like a phone keyboard
+
+words people say in chat come first, so `hel` gives hello, help and held, and `cr` gives craft before cross
 
 **picking a suggestion**
 
@@ -32,16 +34,23 @@ lines starting with `/` are left alone, so tab still completes commands and play
 
 **words**
 
-english, with american spelling. item and mob names count as correct in the game's language, modded ones too. player names don't
+english, with american spelling. item and mob names count as correct in the game's language, modded ones too. so do chat words like gg, afk and lol. player names don't
 
-words you add go to `config/bettertyping/personal_dictionary.txt`. the shortcuts and the on/off switches are in `config/bettertyping/settings.properties`, e.g. `key.undo=ctrl+z`
+**settings**
+
+<img width="560" alt="the settings screen" src="assets/settings.png" />
+
+open them with `/bettertyping`, or the config button in mod menu
+
+- turn spell check, autocomplete and undo/redo on or off
+- change the three shortcuts: tick ctrl, shift and alt and pick a key
+- see and remove the words in your personal dictionary
+
+they're saved to `config/bettertyping/settings.properties` and `config/bettertyping/personal_dictionary.txt`
 
 **not there yet**
 
-- [ ] a settings screen, with a mod menu button and a `/bettertyping` command
-- [ ] rebinding the shortcuts from the game
 - [ ] more languages and british spelling as downloads
-- [ ] better autocomplete order. words are ranked by how often they show up in books, so `hel` gives held, help and helped before hello
 - [ ] on signs and in books the list can cover the line above
 
 **[building](./versions)**
@@ -52,10 +61,10 @@ gradle runs on java 25, the 1.21.11 jar targets java 21
 ./gradlew build                     # every version, jars in versions/<mc>/build/libs/
 ./gradlew :26.3:runClient           # a dev client, its worlds stay in run/26.3
 ./gradlew :core:test                # unit tests
-./gradlew :26.3:runClientGameTest   # opens the game and types through chat, a sign and a book
+./gradlew :26.3:runClientGameTest   # opens the game, types through chat, a sign and a book, then the settings
 ```
 
-the in-game test checks the text after every step (20 checks) and saves screenshots to `run/<mc>/screenshots/`. the images above come from there
+the in-game test checks the text after every step (25 checks) and saves screenshots to `run/<mc>/screenshots/`. the images above come from there
 
 <details>
 <summary>how it's laid out</summary>
@@ -65,10 +74,10 @@ the in-game test checks the text after every step (20 checks) and saves screensh
 | folder | what's in it |
 |---|---|
 | `core/` | plain java, no minecraft. `TypingSession` is the way in: one per screen, it takes keys and characters and says what to draw. behind it are the spell checker, autocomplete and undo history |
-| `common/` | minecraft code every version shares: screen hooks, drawing, item and mob names. `field/` adapts each kind of text field (text box, sign line, book page) |
+| `common/` | minecraft code every version shares: screen hooks, drawing, item and mob names, the settings screen. `field/` adapts each kind of text field (text box, sign line, book page) |
 | `common/src/gametest/` | the in-game test |
 | `variants/` | code for groups of versions that share an api: how screens draw, which key codes there are, small 26.2 changes |
-| `versions/<mc>/` | one gradle project per version. its `gradle.properties` picks minecraft, fabric api, mod menu and which variants to use |
+| `versions/<mc>/` | one gradle project per version. its `gradle.properties` picks minecraft, fabric api, yacl, mod menu and which variants to use |
 
 the words used in the code are in [CONTEXT.md](CONTEXT.md)
 
@@ -80,6 +89,7 @@ the words used in the code are in [CONTEXT.md](CONTEXT.md)
 
 - which words are correct: the [english speller database](https://github.com/en-wl/wordlist) (scowl), release `rel-2026.02.25`, size 60, american. the same source as the libreoffice and hunspell english dictionaries
 - the order: google books counts from [gwordlist](https://github.com/hackerb9/gwordlist). words without a count go last
+- chat words: books rarely say hello or gg, so `en_us.chat.txt` next to it lists words common in minecraft chat, most common first. the n-th one ranks at least as high as the dictionary's (n × 3)-th word, and the ones the dictionary lacks count as correct
 
 <details>
 <summary>rebuilding it</summary>

@@ -10,5 +10,11 @@
     "title": "Autocomplete",
     "description": "After 2 letters, up to 3 words show up above the field. Tab picks one, Space takes it.",
     "featured": false
+  },
+  {
+    "file": "assets/settings.png",
+    "title": "Settings",
+    "description": "Open with /bettertyping or from Mod Menu: turn features on or off, change the shortcuts and edit your personal dictionary.",
+    "featured": false
   }
 ]

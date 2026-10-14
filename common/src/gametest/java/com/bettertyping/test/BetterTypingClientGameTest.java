@@ -8,14 +8,20 @@ import com.bettertyping.mixin.MultiLineEditBoxAccessor;
 import com.bettertyping.mixin.SignEditScreenAccessor;
 import com.bettertyping.version.Screens;
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.isxander.yacl3.api.ListOption;
+import dev.isxander.yacl3.api.Option;
+import dev.isxander.yacl3.gui.YACLScreen;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.components.Whence;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
@@ -24,7 +30,7 @@ import net.minecraft.client.input.KeyEvent;
 
 /**
  * Plays through chat, a sign and a book in a fresh world, checking the text after each step and
- * saving screenshots of the underlines and popups.
+ * saving screenshots of the underlines and popups, then opens the settings screen.
  */
 public class BetterTypingClientGameTest implements FabricClientGameTest {
 	private static final String TEST_WORD = "blorptest";
@@ -37,6 +43,7 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 			chat(context);
 			sign(context, world.getServer());
 			book(context, world.getServer());
+			settings(context);
 		}
 	}
 
@@ -116,9 +123,7 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		press(context, "tab");
 		context.takeScreenshot("bettertyping-08-sign-autocomplete");
 		type(context, " ");
-		String completed = signLine(context, 1);
-		check(completed.startsWith("hel") && completed.length() > 4 && completed.endsWith(" "),
-			"Autocomplete on a sign line, got '" + completed + "'");
+		expect("hello ", signLine(context, 1), "Autocomplete on a sign line puts chat words first");
 		ctrl(context, "z");
 		expect("hel", signLine(context, 1), "Undo on a sign line");
 		context.takeScreenshot("bettertyping-09-sign-after-undo");
@@ -149,6 +154,59 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		check(bookText(context).startsWith("Ths is a tset"), "Undo in a book");
 
 		close(context);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static void settings(ClientGameTestContext context) {
+		addPersonalWord(TEST_WORD);
+		context.getInput().pressKey(options -> options.keyChat);
+		context.waitForScreen(ChatScreen.class);
+		type(context, "/bettertyping");
+		press(context, "enter");
+		context.waitForScreen(YACLScreen.class);
+		check(true, "/bettertyping opens the settings screen");
+		context.takeScreenshot("bettertyping-12-settings");
+
+		// Turn autocomplete off the way the screen does: set the option, then press Save.
+		context.runOnClient(client -> {
+			YACLScreen screen = (YACLScreen) Screens.current(client);
+			((Option<Boolean>) screen.config.categories().get(0).groups().get(0).options().get(1)).requestSet(false);
+			screen.finishOrSave();
+		});
+		check(!BetterTyping.settings().autocomplete, "Saving the screen applies the change");
+		check(settingsFile().contains("autocomplete=false"), "Saving the screen writes the settings file");
+
+		context.runOnClient(client -> ((YACLScreen) Screens.current(client)).tabNavigationBar.selectTab(1, false));
+		context.waitTicks(2);
+		context.takeScreenshot("bettertyping-13-settings-dictionary");
+		context.runOnClient(client -> {
+			YACLScreen screen = (YACLScreen) Screens.current(client);
+			ListOption<String> words = (ListOption<String>) screen.config.categories().get(1).groups().get(1);
+			check(words.pendingValue().contains(TEST_WORD), "The personal dictionary lists added words");
+			words.requestSet(List.of());
+			screen.finishOrSave();
+		});
+		check(!BetterTyping.checker().isCorrect(TEST_WORD), "Removing a word from the list removes it from the dictionary");
+
+		BetterTyping.settings().autocomplete = true;
+		BetterTyping.saveSettings();
+		close(context);
+	}
+
+	private static void addPersonalWord(String word) {
+		try {
+			BetterTyping.checker().addPersonalWord(word);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	private static String settingsFile() {
+		try {
+			return Files.readString(FabricLoader.getInstance().getConfigDir().resolve("bettertyping/settings.properties"));
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 	/** Escape closes an open popup first, so it may take two presses to leave the screen. */

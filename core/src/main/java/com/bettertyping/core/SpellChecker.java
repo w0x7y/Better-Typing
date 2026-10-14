@@ -75,6 +75,11 @@ public final class SpellChecker {
 		}
 	}
 
+	/** The personal dictionary's words, lowercase and sorted. */
+	public List<String> personalWords() {
+		return personal.all();
+	}
+
 	private synchronized void update(UnaryOperator<Sources> change) {
 		sources = change.apply(sources);
 	}

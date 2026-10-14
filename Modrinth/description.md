@@ -6,7 +6,8 @@ anvil renaming, signs and books, and draws its suggestions the way vanilla draws
 ![Spelling suggestions in chat](gallery:Spelling suggestions)
 
 Builds are available for Minecraft 1.21.11, 26.1, 26.2 and 26.3. Use the jar for your game version,
-with Fabric Loader 0.19.5 or newer and Fabric API. 1.21.11 needs Java 21, 26.x needs Java 25.
+with Fabric Loader 0.19.5 or newer, Fabric API and [YetAnotherConfigLib](https://modrinth.com/mod/yacl).
+1.21.11 needs Java 21, 26.x needs Java 25.
 
 ## Spell check
 
@@ -19,6 +20,8 @@ Put the cursor on one and press **Tab**: 3 suggestions show up above it, plus "A
 
 After 2 letters, up to 3 words for the one you're typing show up above the field. Accepting one adds a
 space after it, like a phone keyboard.
+
+Words people say in chat come first, so `hel` gives hello, help and held, and `cr` gives craft before cross.
 
 ## Picking a suggestion
 
@@ -37,15 +40,20 @@ On macOS, Ctrl is Cmd, like vanilla's copy and paste.
 ## Words
 
 English, with American spelling. Item and mob names count as correct in the game's language, modded
-ones too. Player names don't.
+ones too, and so do chat words like gg, afk and lol. Player names don't.
 
-Words you add go to `config/bettertyping/personal_dictionary.txt`. The shortcuts and the on/off switches
-are in `config/bettertyping/settings.properties`, for example `key.undo=ctrl+z`.
+## Settings
+
+![The settings screen](gallery:Settings)
+
+Open them with `/bettertyping`, or the config button in Mod Menu.
+
+- Turn spell check, autocomplete and undo/redo on or off.
+- Change the three shortcuts: tick Ctrl, Shift and Alt and pick a key.
+- See and remove the words in your personal dictionary.
 
 ## Coming later
 
-- A settings screen, with a Mod Menu button and a `/bettertyping` command
-- Rebinding the shortcuts in game
 - More languages, and British spelling, as downloads
 
 ## Credits

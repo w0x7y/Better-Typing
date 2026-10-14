@@ -1,7 +1,5 @@
-First release.
-
-- Spell check: misspelled words get a red squiggle; Tab on one shows 3 suggestions and "Add to dictionary"
-- Autocomplete: up to 3 words while you type, Tab to pick, Space to take it
-- Undo and redo in every text field: Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y
-- Works in chat, anvil renaming, signs and books
-- Item and mob names count as correct words
+- Settings screen: open it with /bettertyping or from Mod Menu. Turn spell check, autocomplete and undo/redo on or off, change the shortcuts and edit your personal dictionary
+- Autocomplete puts words common in chat first: "hel" now gives hello, help and held
+- Chat words like gg, afk, lol and brb are no longer underlined
+- The mod now has an icon in Mod Menu
+- Needs YetAnotherConfigLib
