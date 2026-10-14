@@ -1,0 +1,28 @@
+name: Sync Modrinth page
+
+# Uploads new gallery images and replaces the summary and description from Modrinth/.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: modrinth-page
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6.2.0
+        with:
+          python-version: '3.x'
+      - name: Check the page files
+        run: python3 tools/modrinth_page.py > /dev/null
+      - name: Upload the gallery and description
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: python3 tools/modrinth_page.py --apply

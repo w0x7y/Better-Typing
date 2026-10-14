@@ -1,0 +1,14 @@
+[
+  {
+    "file": "assets/spelling.png",
+    "title": "Spelling suggestions",
+    "description": "Misspelled words get a red squiggle. Put the cursor on one and press Tab for 3 suggestions, or add the word to your dictionary.",
+    "featured": true
+  },
+  {
+    "file": "assets/autocomplete.png",
+    "title": "Autocomplete",
+    "description": "After 2 letters, up to 3 words show up above the field. Tab picks one, Space takes it.",
+    "featured": false
+  }
+]
