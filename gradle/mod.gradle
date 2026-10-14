@@ -1,5 +1,6 @@
 // Applied by every versions/<mc>/build.gradle. Reads per-version values from that folder's gradle.properties.
 apply plugin: project.loom_plugin
+apply plugin: 'com.modrinth.minotaur'
 
 def remap = project.loom_plugin == 'net.fabricmc.fabric-loom-remap'
 def javaVersion = project.java_version as int
@@ -97,4 +98,22 @@ java {
 
 jar {
 	from(rootProject.file('LICENSE'))
+}
+
+// Publishing: `./gradlew modrinth` with MODRINTH_TOKEN set uploads every version's jar, run by
+// .github/workflows/release.yml. `-Pmodrinth_dry_run=true` builds the whole upload and prints it instead.
+modrinth {
+	projectId = project.modrinth_id
+	versionNumber = project.version
+	versionName = "Better Typing ${project.mod_version} for Minecraft ${project.name}"
+	versionType = project.release_type
+	gameVersions = project.modrinth_game_versions.split(',').collect { it.trim() }
+	loaders = ['fabric']
+	// Rewrite Modrinth/changelog.md for every release.
+	changelog = rootProject.file('Modrinth/changelog.md').text
+	uploadFile = remap ? remapJar : jar
+	debugMode = providers.gradleProperty('modrinth_dry_run').map { it.toBoolean() }.orElse(false)
+	dependencies {
+		required.project 'fabric-api'
+	}
 }

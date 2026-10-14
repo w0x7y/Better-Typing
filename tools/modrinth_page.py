@@ -1,4 +1,4 @@
-"""Preview the Modrinth project page; use --apply to upload the gallery and update the summary and body.
+"""Preview the Modrinth project page; use --apply to upload the gallery and update the summary, body and license.
 
 Gallery images are matched by title: ones already on the page are left alone, so running it twice
 doesn't upload duplicates. In Modrinth/description.md, `gallery:<title>` stands for that image's URL.
@@ -67,9 +67,9 @@ def apply(project: dict, gallery: list[dict], body: str, token: str, root: Path 
         print(f"Uploaded {item['file']} as \"{item['title']}\"")
     urls = {image["title"]: image["url"] for image in request("GET", f"/project/{slug}", token)["gallery"]}
     body = GALLERY_LINK.sub(lambda match: f"({urls[match.group(1)]})", body)
-    payload = json.dumps({"description": project["summary"], "body": body}).encode("utf-8")
+    payload = json.dumps({"description": project["summary"], "body": body, "license_id": project["license"]}).encode("utf-8")
     request("PATCH", f"/project/{slug}", token, payload, "application/json")
-    print(f"Updated the summary and description of {project['id']}")
+    print(f"Updated the summary, description and license of {project['id']}")
 
 
 def main() -> None:

@@ -2,4 +2,5 @@ plugins {
 	// Obfuscated versions (1.21.11) use the remapping plugin, unobfuscated ones (26.x) the plain one.
 	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}" apply false
+	id 'com.modrinth.minotaur' version '2.9.0' apply false
 }
