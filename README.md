@@ -34,9 +34,15 @@ on a sign, when the list would cover a line you wrote, it goes below the word or
 
 **ctrl+z** undoes, **ctrl+shift+z** and **ctrl+y** redo, in every text field. typing is undone a word at a time, an accepted suggestion is its own step. every sign line and book page keeps its own history. on macos ctrl is cmd, like vanilla's copy and paste
 
-**words**
+**languages**
 
-english, with american spelling. item and mob names count as correct in the game's language, modded ones too. so do chat words like gg, afk and lol. player names don't
+english with american or british spelling comes with the mod. german, spanish, french, italian, dutch, brazilian portuguese and swedish are a download each, about 1 mb
+
+pick one in the settings and press save. the mod downloads it from modrinth, or github if modrinth can't be reached, and only keeps it if its sha-512 matches the one written into the mod. it's saved to `config/bettertyping/dictionaries/`. a pack can also go in the mods folder like any mod, for modpacks or playing offline. nothing is downloaded unless you pick a language
+
+the default, game language, uses the game's language when it's installed, and american english otherwise
+
+item and mob names count as correct in the game's language, modded ones too. so do chat words like gg, afk and lol, in every language. player names don't
 
 **settings**
 
@@ -46,13 +52,14 @@ open them with `/bettertyping`, or the config button in mod menu
 
 - turn spell check, autocomplete and undo/redo on or off
 - change the three shortcuts: tick ctrl, shift and alt and pick a key
+- pick the language
 - see and remove the words in your personal dictionary
 
 they're saved to `config/bettertyping/settings.properties` and `config/bettertyping/personal_dictionary.txt`
 
 **not there yet**
 
-- [ ] more languages and british spelling as downloads
+- [ ] russian, polish, turkish, czech and ukrainian. they have millions of word forms, so they need a more compact word list first
 
 **[building](./versions)**
 
@@ -62,10 +69,10 @@ gradle runs on java 25, the 1.21.11 jar targets java 21
 ./gradlew build                     # every version, jars in versions/<mc>/build/libs/
 ./gradlew :26.3:runClient           # a dev client, its worlds stay in run/26.3
 ./gradlew :core:test                # unit tests
-./gradlew :26.3:runClientGameTest   # opens the game, types through chat, a sign and a book, then the settings
+./gradlew :26.3:runClientGameTest   # opens the game, types through chat, a sign and a book, then the settings and languages
 ```
 
-the in-game test checks the text after every step (25 checks) and saves screenshots to `run/<mc>/screenshots/`. the images above come from there
+the in-game test checks the text after every step (29 checks, plus that every shortcut key is a real minecraft key) and saves screenshots to `run/<mc>/screenshots/`. the images above come from there
 
 <details>
 <summary>how it's laid out</summary>
@@ -84,13 +91,13 @@ the words used in the code are in [CONTEXT.md](CONTEXT.md)
 
 </details>
 
-**[the word list](./tools/build_dictionary.py)**
+**[the english word lists](./tools/build_dictionary.py)**
 
-109,902 english words in `common/src/main/resources/assets/bettertyping/dictionaries/en_us.txt`, one per line, most common first
+`en_us.txt` (109,902 words) and `en_gb.txt` (109,550) in `common/src/main/resources/assets/bettertyping/dictionaries/`, one word per line, most common first
 
-- which words are correct: the [english speller database](https://github.com/en-wl/wordlist) (scowl), release `rel-2026.02.25`, size 60, american. the same source as the libreoffice and hunspell english dictionaries
+- which words are correct: the [english speller database](https://github.com/en-wl/wordlist) (scowl), release `rel-2026.02.25`, size 60, american or british. the same source as the libreoffice and hunspell english dictionaries
 - the order: google books counts from [gwordlist](https://github.com/hackerb9/gwordlist). words without a count go last
-- chat words: books rarely say hello or gg, so `en_us.chat.txt` next to it lists words common in minecraft chat, most common first. the n-th one ranks at least as high as the dictionary's (n × 3)-th word, and the ones the dictionary lacks count as correct
+- chat words: books rarely say hello or gg, so `en_us.chat.txt` next to it lists words common in minecraft chat, most common first. the n-th one ranks at least as high as the dictionary's (n × 3)-th word, and the ones the dictionary lacks count as correct. `en_gb.chat.txt` is the same with british spelling, and `chat.txt` holds the gaming slang every other language gets
 
 <details>
 <summary>rebuilding it</summary>
@@ -105,6 +112,8 @@ python3 tools/build_dictionary.py --esdb-lists wl-35.txt wl-40.txt wl-50.txt wl-
   --frequency frequency-alpha-alldicts.txt --max-size 60 \
   --out common/src/main/resources/assets/bettertyping/dictionaries/en_us.txt
 ```
+
+for `en_gb.txt`, generate the lists with `B` instead of `A`
 
 stay at size 70 or below. past 80 the list pulls in the uk advanced cryptics dictionary, which needs its own notice, and the australian data needs one too
 
@@ -123,4 +132,28 @@ both ship in every jar as [THIRD_PARTY_NOTICES.txt](common/src/main/resources/TH
 
 </details>
 
-_credits: [english speller database](https://github.com/en-wl/wordlist) by kevin atkinson, [gwordlist](https://github.com/hackerb9/gwordlist) by hackerb9. license: [mit](./LICENSE)_
+**[the language packs](./tools/build_language_packs.py)**
+
+each pack is a small fabric mod jar with one word list: the words of [wordfreq](https://github.com/rspeer/wordfreq)'s list for that language that the [libreoffice dictionary](https://github.com/LibreOffice/dictionaries) accepts, most common first, up to 200,000. wordfreq mixes subtitles, twitter, reddit and books, so chat words rank the way people use them. french and italian lists end with their elisions (`l'`, `dell'`), so a word after one counts as correct
+
+the packs are **gpl-3.0**, because wordfreq's data is cc by-sa 4.0. they're separate downloads, so the mod stays mit. each jar's `NOTICE.txt` lists its sources and how it was made
+
+`tools/language_packs.json` pins the libreoffice commit, every source file's sha-256 and the wordfreq version. `common/src/main/resources/assets/bettertyping/languages.txt` pins each pack's size, sha-512 and download urls
+
+<details>
+<summary>rebuilding and publishing them</summary>
+
+<br>
+
+```sh
+python3 -m venv venv && venv/bin/pip install wordfreq==3.1.1 spylls==0.1.7
+# the files listed in tools/language_packs.json, from
+# https://raw.githubusercontent.com/LibreOffice/dictionaries/<commit>/<path>, into dictionaries/
+venv/bin/python tools/build_language_packs.py --sources dictionaries --out packs   # about 15 minutes
+```
+
+it prints a catalog line per pack: put the size and sha-512 into `languages.txt`. then attach the jars to a github release (`languages-<version>`) and run the "publish language packs" workflow on it, which creates a draft modrinth project per language and uploads the pack. add each modrinth url in front of the github one
+
+</details>
+
+_credits: [english speller database](https://github.com/en-wl/wordlist) by kevin atkinson, [gwordlist](https://github.com/hackerb9/gwordlist) by hackerb9, [wordfreq](https://github.com/rspeer/wordfreq) by robyn speer, and the [libreoffice dictionaries](https://github.com/LibreOffice/dictionaries) listed in each pack. license: [mit](./LICENSE), the language packs gpl-3.0_

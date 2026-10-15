@@ -9,10 +9,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiConsumer;
 
 /**
  * An immutable set of words with a popularity rank (lower = more common).
@@ -20,6 +23,9 @@ import java.util.Map;
  * <p>Case-sensitive lists follow spell-checker conventions: "London" is only correct capitalized,
  * while "hello" is also correct as "Hello" (sentence start) and "HELLO". Case-insensitive lists
  * (game names, the personal dictionary) accept any capitalization.
+ *
+ * <p>An entry ending in an apostrophe is an elision ("l'" in French, "dell'" in Italian): it isn't a
+ * word by itself, but a word of the list with it in front counts as correct ("l'homme").
  */
 public final class WordList {
 	public static final WordList EMPTY = new WordList(Map.of(), false);
@@ -29,10 +35,20 @@ public final class WordList {
 	private final Map<String, Integer> exact;
 	private final Map<String, Integer> lowerRank = new HashMap<>();
 	private final Map<String, String> lowerDisplay = new HashMap<>();
+	private final Set<String> elisions = new HashSet<>();
 	private final String[] sortedLower;
 	private final List<List<String>> byLength = new ArrayList<>();
 
-	private WordList(Map<String, Integer> ranks, boolean caseSensitive) {
+	private WordList(Map<String, Integer> entries, boolean caseSensitive) {
+		Map<String, Integer> ranks = new HashMap<>();
+		for (Map.Entry<String, Integer> entry : entries.entrySet()) {
+			String word = entry.getKey();
+			if (word.length() > 1 && word.endsWith("'")) {
+				elisions.add(word.toLowerCase(Locale.ROOT));
+			} else {
+				ranks.put(word, entry.getValue());
+			}
+		}
 		this.caseSensitive = caseSensitive;
 		this.exact = caseSensitive ? Map.copyOf(ranks) : Map.of();
 		for (Map.Entry<String, Integer> entry : ranks.entrySet()) {
@@ -123,6 +139,14 @@ public final class WordList {
 
 	public boolean contains(String word) {
 		word = Tokenizer.normalize(word);
+		if (containsWord(word)) {
+			return true;
+		}
+		int elided = elisionEnd(word);
+		return elided > 0 && contains(word.substring(elided));
+	}
+
+	private boolean containsWord(String word) {
 		String lower = word.toLowerCase(Locale.ROOT);
 		if (!caseSensitive) {
 			return lowerRank.containsKey(lower);
@@ -137,8 +161,38 @@ public final class WordList {
 		};
 	}
 
+	/**
+	 * Where the word after a leading elision starts ("l'homme" gives 2), or -1 when the word doesn't
+	 * start with one of the list's elisions.
+	 */
+	private int elisionEnd(String word) {
+		int apostrophe = word.indexOf('\'');
+		if (apostrophe < 0 || apostrophe == word.length() - 1 || elisions.isEmpty()) {
+			return -1;
+		}
+		return elisions.contains(word.substring(0, apostrophe + 1).toLowerCase(Locale.ROOT)) ? apostrophe + 1 : -1;
+	}
+
+	/** Runs {@code collect} on the word after a leading elision and puts the elision back in front, as typed. */
+	private boolean afterElision(String word, List<Candidate> out, BiConsumer<String, List<Candidate>> collect) {
+		word = Tokenizer.normalize(word);
+		int elided = elisionEnd(word);
+		if (elided < 0) {
+			return false;
+		}
+		List<Candidate> rest = new ArrayList<>();
+		collect.accept(word.substring(elided), rest);
+		for (Candidate candidate : rest) {
+			out.add(new Candidate(word.substring(0, elided) + candidate.word(), candidate.distance(), candidate.rank()));
+		}
+		return true;
+	}
+
 	/** Adds candidates for spelling suggestions: words within {@code maxDistance} edits of {@code word}. */
 	void collectSuggestions(String word, int maxDistance, List<Candidate> out) {
+		if (afterElision(word, out, (rest, candidates) -> collectSuggestions(rest, maxDistance, candidates))) {
+			return;
+		}
 		String lower = Tokenizer.normalize(word).toLowerCase(Locale.ROOT);
 		boolean allowPossessive = lower.indexOf('\'') >= 0;
 		int from = Math.max(1, lower.length() - maxDistance);
@@ -158,6 +212,9 @@ public final class WordList {
 
 	/** Adds autocomplete candidates: words starting with {@code prefix}, excluding the prefix itself. */
 	void collectCompletions(String prefix, List<Candidate> out) {
+		if (afterElision(prefix, out, this::collectCompletions)) {
+			return;
+		}
 		String lower = Tokenizer.normalize(prefix).toLowerCase(Locale.ROOT);
 		boolean allowPossessive = lower.indexOf('\'') >= 0;
 		int i = Arrays.binarySearch(sortedLower, lower);

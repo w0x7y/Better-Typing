@@ -46,6 +46,14 @@ class LanguageDictionaryTest {
 	}
 
 	@Test
+	void languagesWithoutChatWordsGetTheSharedOnes() {
+		LanguageDictionary german = load(List.of("de_de", "en_us"),
+			Map.of("de_de.txt", "der\nhallo\n", "en_us.txt", "the\n", "en_us.chat.txt", "hello\n", "chat.txt", "gg\nafk\n")).orElseThrow();
+		assertTrue(german.words().contains("gg"));
+		assertFalse(german.words().contains("hello"));
+	}
+
+	@Test
 	void chatWordsAreOptional() {
 		LanguageDictionary dictionary = load(List.of("en_us"), Map.of("en_us.txt", "the\nhello\n")).orElseThrow();
 		assertTrue(dictionary.words().contains("hello"));

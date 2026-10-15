@@ -1,13 +1,11 @@
 package com.bettertyping;
 
-import com.bettertyping.core.LanguageDictionary;
 import com.bettertyping.core.Settings;
 import com.bettertyping.core.SpellChecker;
 import com.bettertyping.version.Screens;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.concurrent.CompletableFuture;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -20,7 +18,6 @@ import org.slf4j.LoggerFactory;
 public class BetterTyping implements ClientModInitializer {
 	public static final String MOD_ID = "bettertyping";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	private static final String DICTIONARIES = "/assets/bettertyping/dictionaries/";
 
 	private static Settings settings = new Settings();
 	private static Path settingsFile;
@@ -39,10 +36,12 @@ public class BetterTyping implements ClientModInitializer {
 		}
 
 		checker = new SpellChecker(configDir.resolve("personal_dictionary.txt"), e -> LOGGER.error(e.getMessage(), e.getCause()));
-		CompletableFuture.runAsync(BetterTyping::loadLanguage);
+		Languages.init(configDir.resolve("dictionaries"));
 
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
-			// Item and mob names exist (and are translated) once a world is loaded; the language can only change between screens.
+			// The game's language can only change between screens. Nothing is flagged until a dictionary has loaded.
+			Languages.refresh();
+			// Item and mob names exist (and are translated) once a world is loaded.
 			if (client.level != null) {
 				GameWords.refreshIfNeeded(checker);
 			}
@@ -67,18 +66,6 @@ public class BetterTyping implements ClientModInitializer {
 		} catch (IOException e) {
 			LOGGER.error("Couldn't save settings", e);
 		}
-	}
-
-	/** Loads the first configured language that ships with the mod. Nothing is flagged until this finishes. */
-	private static void loadLanguage() {
-		long start = System.nanoTime();
-		LanguageDictionary.loadFirst(settings.languages, name -> BetterTyping.class.getResourceAsStream(DICTIONARIES + name),
-				(language, e) -> LOGGER.warn("Couldn't load the {} dictionary: {}", language, e.toString()))
-			.ifPresent(dictionary -> {
-				checker.setLanguage(dictionary.words());
-				LOGGER.info("Loaded {} dictionary: {} words in {} ms", dictionary.language(), dictionary.words().size(),
-					(System.nanoTime() - start) / 1_000_000);
-			});
 	}
 
 	public static Settings settings() {

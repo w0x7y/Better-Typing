@@ -1,0 +1,54 @@
+# Gaming slang and Minecraft words used in chat whatever the language, most common first. Languages
+# without chat words of their own (en_us.chat.txt) get these, so gg and afk count as correct in any
+# language. Blank lines and lines starting with # are skipped.
+
+# talking
+ok
+lol
+gg
+idk
+brb
+afk
+haha
+lmao
+omg
+cya
+ty
+np
+pls
+plz
+thx
+btw
+tbh
+imo
+ngl
+nvm
+ofc
+rn
+irl
+gl
+wp
+ez
+ikr
+smh
+wb
+gtg
+ttyl
+xd
+oof
+bruh
+
+# playing
+minecraft
+netherite
+redstone
+pickaxe
+enderman
+respawn
+coords
+tp
+laggy
+pvp
+noob
+xp
+griefed

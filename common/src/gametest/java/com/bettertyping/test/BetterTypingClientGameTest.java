@@ -3,6 +3,7 @@ package com.bettertyping.test;
 import com.bettertyping.BetterTyping;
 import com.bettertyping.ScreenHooks;
 import com.bettertyping.core.KeyCombo;
+import com.bettertyping.core.LanguagePacks;
 import com.bettertyping.mixin.BookEditScreenAccessor;
 import com.bettertyping.mixin.ChatScreenAccessor;
 import com.bettertyping.mixin.MultiLineEditBoxAccessor;
@@ -194,9 +195,27 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		});
 		check(!BetterTyping.checker().isCorrect(TEST_WORD), "Removing a word from the list removes it from the dictionary");
 
+		// English (UK) is bundled, so picking it switches the dictionary without a download.
+		setLanguage(context, "en_gb");
+		context.waitFor(client -> BetterTyping.checker().isCorrect("colour") && !BetterTyping.checker().isCorrect("color"));
+		check(true, "Picking English (UK) in the settings loads British spelling");
+		setLanguage(context, LanguagePacks.GAME_LANGUAGE);
+		context.waitFor(client -> BetterTyping.checker().isCorrect("color"));
+		check(true, "Game language goes back to English (US)");
+
 		BetterTyping.settings().autocomplete = true;
 		BetterTyping.saveSettings();
 		close(context);
+	}
+
+	/** Picks a language on the settings screen's dictionary tab and presses Save. */
+	@SuppressWarnings("unchecked")
+	private static void setLanguage(ClientGameTestContext context, String code) {
+		context.runOnClient(client -> {
+			YACLScreen screen = (YACLScreen) Screens.current(client);
+			((Option<String>) screen.config.categories().get(1).groups().get(0).options().get(0)).requestSet(code);
+			screen.finishOrSave();
+		});
 	}
 
 	private static void removePersonalWord(String word) {

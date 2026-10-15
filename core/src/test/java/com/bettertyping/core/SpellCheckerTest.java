@@ -101,6 +101,15 @@ class SpellCheckerTest {
 	}
 
 	@Test
+	void suggestionsAndCompletionsKeepAnElision() throws IOException {
+		WordList french = WordList.language(new java.io.ByteArrayInputStream("homme\nhistoire\nest\nl'\n".getBytes()), InputStream.nullInputStream());
+		SpellChecker checker = checker(french);
+		assertEquals(List.of("l'homme"), checker.suggest("l'homem", 3));
+		assertEquals(List.of("L'homme", "L'histoire"), checker.complete("L'h", 3));
+		assertTrue(checker.misspelled("l'homme est").isEmpty());
+	}
+
+	@Test
 	void misspellingsRefreshWhenAWordSourceChanges() throws IOException {
 		SpellChecker checker = checker();
 		assertEquals(List.of("netherite"), checker.misspelled("netherite ingot").stream().map(WordSpan::text).toList());

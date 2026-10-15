@@ -6,9 +6,11 @@
 
 **Typing session**: everything the mod does for one open screen: each field's undo history and suggestion list, which field was typed in last, and how keys are handled. Lives exactly as long as its screen (`TypingSession`).
 
-**Word sources**: what counts as a correct word: the language dictionary (the first of the player's languages that has a word list, `LanguageDictionary`), game words (item and mob names in the game's language) and the personal dictionary (words the player added). Replaced as one snapshot whenever any of them changes.
+**Word sources**: what counts as a correct word: the language dictionary (the first of the player's languages that's installed, `LanguageDictionary`; "game language" follows the game's own), game words (item and mob names in the game's language) and the personal dictionary (words the player added). Replaced as one snapshot whenever any of them changes.
 
-**Chat words**: a language's list of words common in Minecraft chat (`en_us.chat.txt`), most common first. Part of the language dictionary: they rank higher than their book frequency, and the ones the dictionary lacks ("gg", "afk") count as correct.
+**Chat words**: a language's list of words common in Minecraft chat (`en_us.chat.txt`), most common first. Part of the language dictionary: they rank higher than their book frequency, and the ones the dictionary lacks ("gg", "afk") count as correct. Languages without their own get the shared gaming slang in `chat.txt`.
+
+**Language pack**: a language that isn't bundled with the mod: a small jar holding one word list, downloaded when the player picks that language (`LanguagePacks`). The mod's catalog (`languages.txt`) pins each pack's size and SHA-512, so it keeps only that exact file, from Modrinth or the GitHub release. Packs installed as mods work too. Elisions in a list (`l'`, `dell'`) aren't words but let a word follow them.
 
 **Misspelling**: a word not found in any word source. Underlined with a red squiggle, except the word being typed at the cursor, until it's finished.
 

@@ -1,17 +1,22 @@
 Better Typing - third-party notices
 ===================================
 
-The English dictionary bundled with this mod
-(assets/bettertyping/dictionaries/en_us.txt) is built from the two sources
-below. The word list itself comes from source 1; source 2 is only used to sort
-the words from most to least common. No word counts are included.
+The English dictionaries bundled with this mod
+(assets/bettertyping/dictionaries/en_us.txt and en_gb.txt) are built from the
+two sources below. The word lists themselves come from source 1; source 2 is
+only used to sort the words from most to least common. No word counts are
+included.
+
+Other languages are separate downloads (language packs), not part of this jar.
+Each pack carries its own licence and notices.
 
 
 1. English word list: SCOWL / English Speller Database (ESDB)
 -------------------------------------------------------------
 
 Release rel-2026.02.25, https://github.com/en-wl/wordlist
-Generated word list: size 60, American spelling, variant level 1, accents removed.
+Generated word lists: size 60, variant level 1, accents removed, one with
+American spelling (en_us.txt) and one with British spelling (en_gb.txt).
 
 Copyright 2000-2026 by Kevin Atkinson
 
@@ -47,4 +52,4 @@ dataset (version 3, 2020-02-17) by Google, https://books.google.com/ngrams
 Licensed under the Creative Commons Attribution 3.0 Unported License:
 https://creativecommons.org/licenses/by/3.0/
 
-Changes: the counts were used only to put the word list in frequency order.
+Changes: the counts were used only to put the word lists in frequency order.

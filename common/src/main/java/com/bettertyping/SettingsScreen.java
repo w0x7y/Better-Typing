@@ -1,20 +1,23 @@
 package com.bettertyping;
 
 import com.bettertyping.core.KeyCombo;
+import com.bettertyping.core.LanguagePacks;
 import com.bettertyping.core.Settings;
 import com.bettertyping.core.SpellChecker;
 import dev.isxander.yacl3.api.ConfigCategory;
-import dev.isxander.yacl3.api.LabelOption;
 import dev.isxander.yacl3.api.ListOption;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.OptionGroup;
 import dev.isxander.yacl3.api.YetAnotherConfigLib;
+import dev.isxander.yacl3.api.controller.CyclingListControllerBuilder;
 import dev.isxander.yacl3.api.controller.DropdownStringControllerBuilder;
 import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -44,7 +47,7 @@ public final class SettingsScreen {
 				.build())
 			.category(ConfigCategory.createBuilder()
 				.name(text("dictionary"))
-				.option(LabelOption.create(text("language")))
+				.option(language(settings))
 				.group(personalDictionary(BetterTyping.checker()))
 				.build())
 			.save(BetterTyping::saveSettings)
@@ -90,6 +93,29 @@ public final class SettingsScreen {
 			.name(text("shortcut." + name))
 			.binding(fallback, get, set)
 			.controller(TickBoxControllerBuilder::create)
+			.build();
+	}
+
+	/**
+	 * Which language's words to use: the game's language or one from the catalog. Saving a language that
+	 * isn't installed downloads it.
+	 */
+	private static Option<String> language(Settings settings) {
+		// Worked out once: telling whether a pack is installed reads files.
+		Map<String, Component> labels = new LinkedHashMap<>();
+		labels.put(LanguagePacks.GAME_LANGUAGE, Languages.label(LanguagePacks.GAME_LANGUAGE));
+		for (LanguagePacks.Language language : Languages.packs().languages()) {
+			labels.put(language.code(), Languages.label(language.code()));
+		}
+		Supplier<String> current = () -> settings.languages.isEmpty() ? LanguagePacks.GAME_LANGUAGE : settings.languages.get(0);
+		// Set by hand in settings.properties; keep it selectable.
+		labels.computeIfAbsent(current.get(), Languages::label);
+		return Option.<String>createBuilder()
+			.name(text("language"))
+			.description(OptionDescription.of(text("language.description")))
+			.binding(LanguagePacks.GAME_LANGUAGE, current, Languages::choose)
+			.controller(option -> CyclingListControllerBuilder.create(option).values(List.copyOf(labels.keySet()))
+				.formatValue(labels::get))
 			.build();
 	}
 

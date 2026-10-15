@@ -43,6 +43,19 @@ class WordListTest {
 		assertFalse(language.contains("# greetings"));
 	}
 
+	@Test
+	void wordsAfterAnElisionCount() throws IOException {
+		WordList french = WordList.language(lines("homme", "est", "aujourd'hui", "l'", "c'", "qu'"), InputStream.nullInputStream());
+		assertTrue(french.contains("l'homme"));
+		assertTrue(french.contains("L'Homme"));
+		assertTrue(french.contains("c’est"));
+		assertTrue(french.contains("qu'aujourd'hui"));
+		assertFalse(french.contains("l'"));
+		assertFalse(french.contains("x'homme"));
+		assertFalse(french.contains("l'hommme"));
+		assertEquals(3, french.size(), "elisions aren't words");
+	}
+
 	private static InputStream lines(String... lines) {
 		return new ByteArrayInputStream(String.join("\n", lines).getBytes(StandardCharsets.UTF_8));
 	}

@@ -39,10 +39,20 @@ On a sign, when the list would cover a line you wrote, it goes below the word or
 time, and an accepted suggestion is its own step. Every sign line and book page keeps its own history.
 On macOS, Ctrl is Cmd, like vanilla's copy and paste.
 
-## Words
+## Languages
 
-English, with American spelling. Item and mob names count as correct in the game's language, modded
-ones too, and so do chat words like gg, afk and lol. Player names don't.
+English with American or British spelling comes with the mod. German, Spanish, French, Italian, Dutch,
+Brazilian Portuguese and Swedish are a download each, about 1 MB.
+
+Pick one in the settings and press Save. Only then does the mod connect to the internet: it downloads the
+language from its Modrinth project, or from GitHub if Modrinth can't be reached, and keeps it only if its
+SHA-512 matches the one written into the mod. You can also install a language like any mod, for a
+modpack or to play offline.
+
+The default, Game language, uses the game's language when it's installed, and American English otherwise.
+
+Item and mob names count as correct in the game's language, modded ones too, and so do chat words like
+gg, afk and lol, in every language. Player names don't.
 
 ## Settings
 
@@ -52,17 +62,24 @@ Open them with `/bettertyping`, or the config button in Mod Menu.
 
 - Turn spell check, autocomplete and undo/redo on or off.
 - Change the three shortcuts: tick Ctrl, Shift and Alt and pick a key.
+- Pick the language.
 - See and remove the words in your personal dictionary.
 
 ## Coming later
 
-- More languages, and British spelling, as downloads
+- Russian, Polish, Turkish, Czech and Ukrainian. They have millions of word forms, so they need a more
+  compact word list first.
 
 ## Credits
 
-The English word list is built from the [English Speller Database](https://github.com/en-wl/wordlist)
+The English word lists are built from the [English Speller Database](https://github.com/en-wl/wordlist)
 (SCOWL) by Kevin Atkinson and sorted with [gwordlist](https://github.com/hackerb9/gwordlist) by hackerb9,
 compiled from the Google Books Ngram dataset ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)).
+
+The other languages are separate downloads under the GNU GPL version 3, built from the
+[LibreOffice dictionaries](https://github.com/LibreOffice/dictionaries) and ordered with
+[wordfreq](https://github.com/rspeer/wordfreq) by Robyn Speer. Each one's page and NOTICE.txt credit its
+sources.
 
 <details>
 <summary>Word list notice</summary>
