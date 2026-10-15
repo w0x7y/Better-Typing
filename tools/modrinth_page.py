@@ -75,6 +75,8 @@ def apply(project: dict, gallery: list[dict], body: str, token: str, root: Path 
     payload = json.dumps({"description": project["summary"], "body": body, "license_id": project["license"]}).encode("utf-8")
     request("PATCH", f"/project/{slug}", token, payload, "application/json")
     print(f"Updated the summary, description and license of {project['id']}")
+    # Only an approved project shows up for everyone; a draft must first be submitted for review on the website.
+    print(f"Project status: {live['status']}" + (f" (requested: {live['requested_status']})" if live.get("requested_status") else ""))
 
 
 def main() -> None:
