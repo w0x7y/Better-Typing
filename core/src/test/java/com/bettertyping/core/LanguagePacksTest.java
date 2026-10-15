@@ -28,8 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class LanguagePacksTest {
-	private static final URI MIRROR = URI.create("https://mirror.example/de_de.jar");
-	private static final URI BACKUP = URI.create("https://backup.example/de_de.jar");
+	private static final URI RELEASE = URI.create("https://github.example/releases/download/languages-1.0.0/de_de.jar");
 
 	@TempDir
 	Path dir;
@@ -43,10 +42,10 @@ class LanguagePacksTest {
 	@BeforeEach
 	void setUp() throws IOException {
 		String catalog = String.join("\n",
-			"# code\tname\tgame languages\tsize\tsha512\turls",
+			"# code\tname\tgame languages\tsize\tsha512\turl",
 			"en_us\tEnglish (US)\ten_ca en_pt",
 			"en_gb\tEnglish (UK)\ten_au en_nz",
-			"de_de\tDeutsch\tde_at de_ch\t" + pack.length + "\t" + sha512(pack) + "\t" + MIRROR + " " + BACKUP,
+			"de_de\tDeutsch\tde_at de_ch\t" + pack.length + "\t" + sha512(pack) + "\t" + RELEASE,
 			"");
 		Map<String, String> bundled = Map.of("en_us.txt", "the\nhello\n", "en_us.chat.txt", "gg\n", "en_gb.txt", "colour\n");
 		packs = new LanguagePacks(dir.resolve("dictionaries"), LanguagePacks.readCatalog(stream(catalog)),
@@ -94,7 +93,7 @@ class LanguagePacksTest {
 
 	@Test
 	void downloadedPackIsUsed() throws IOException {
-		web.put(MIRROR, pack);
+		web.put(RELEASE, pack);
 		assertFalse(packs.installed("de_de"));
 		packs.download("de_de");
 		assertTrue(packs.installed("de_de"));
@@ -105,21 +104,23 @@ class LanguagePacksTest {
 	}
 
 	@Test
-	void triesTheNextUrlWhenOneFails() throws IOException {
-		web.put(BACKUP, pack);
-		packs.download("de_de");
-		assertEquals(List.of(MIRROR, BACKUP), fetched);
-		assertTrue(packs.installed("de_de"));
+	void failedDownloadLeavesNothingBehind() throws IOException {
+		assertThrows(IOException.class, () -> packs.download("de_de"), "offline");
+		assertFalse(packs.installed("de_de"));
+		assertNoFiles();
 	}
 
 	@Test
 	void fileThatIsNotThePinnedOneIsRejected() throws IOException {
-		byte[] other = jar("de_de.txt", "der\ndie\nHauss\n");
-		web.put(MIRROR, other);
-		web.put(BACKUP, new byte[pack.length + 1]);
-		IOException failure = assertThrows(IOException.class, () -> packs.download("de_de"));
-		assertEquals(2, failure.getSuppressed().length);
+		web.put(RELEASE, jar("de_de.txt", "der\ndie\nHauss\n"));
+		assertThrows(IOException.class, () -> packs.download("de_de"));
+		web.put(RELEASE, new byte[pack.length + 1]);
+		assertThrows(IOException.class, () -> packs.download("de_de"), "larger than pinned");
 		assertFalse(packs.installed("de_de"));
+		assertNoFiles();
+	}
+
+	private void assertNoFiles() throws IOException {
 		try (var files = Files.list(dir.resolve("dictionaries"))) {
 			assertEquals(List.of(), files.toList(), "no partial files are left");
 		}
@@ -127,7 +128,7 @@ class LanguagePacksTest {
 
 	@Test
 	void changedFileOnDiskIsNotUsed() throws IOException {
-		web.put(MIRROR, pack);
+		web.put(RELEASE, pack);
 		packs.download("de_de");
 		byte[] tampered = jar("de_de.txt", "der\ndie\nHauss\n");
 		Files.write(dir.resolve("dictionaries/de_de.jar"), tampered);
@@ -140,10 +141,10 @@ class LanguagePacksTest {
 
 	@Test
 	void downloadingAgainKeepsTheFile() throws IOException {
-		web.put(MIRROR, pack);
+		web.put(RELEASE, pack);
 		packs.download("de_de");
 		packs.download("de_de");
-		assertEquals(List.of(MIRROR), fetched);
+		assertEquals(List.of(RELEASE), fetched);
 		assertArrayEquals(pack, Files.readAllBytes(dir.resolve("dictionaries/de_de.jar")));
 	}
 
@@ -166,7 +167,7 @@ class LanguagePacksTest {
 	void gameLanguageIsOnlyUsedWhenInstalled() throws IOException {
 		assertEquals(List.of("en_gb", "en_us"), packs.resolve(List.of(LanguagePacks.GAME_LANGUAGE), "en_nz"));
 		assertEquals(List.of("en_us"), packs.resolve(List.of(LanguagePacks.GAME_LANGUAGE), "de_de"));
-		web.put(MIRROR, pack);
+		web.put(RELEASE, pack);
 		packs.download("de_de");
 		assertEquals(List.of("de_de", "en_us"), packs.resolve(List.of(LanguagePacks.GAME_LANGUAGE), "de_de"));
 		assertEquals(List.of("en_us"), packs.resolve(List.of("en_us", LanguagePacks.GAME_LANGUAGE), "en_us"));
@@ -175,7 +176,7 @@ class LanguagePacksTest {
 	@Test
 	void chosenPackIsUsedOnceDownloaded() throws IOException {
 		assertEquals(List.of("en_us"), packs.resolve(List.of("de_de"), "en_us"));
-		web.put(MIRROR, pack);
+		web.put(RELEASE, pack);
 		packs.download("de_de");
 		assertEquals(List.of("de_de", "en_us"), packs.resolve(List.of("de_de"), "en_us"));
 		assertEquals(List.of("en_us"), packs.resolve(List.of("xx_xx", "../de_de"), "en_us"));
@@ -192,7 +193,8 @@ class LanguagePacksTest {
 			assertTrue(Files.exists(Path.of("../common/src/main/resources/assets/bettertyping/dictionaries/" + language.code() + ".txt"))
 				!= (language.pack() != null), language.code() + " is either bundled or a pack");
 			if (language.pack() != null) {
-				assertEquals(2, language.pack().urls().size(), language.code() + " has a Modrinth and a GitHub URL");
+				assertTrue(language.pack().url().toString().startsWith("https://github.com/w0x7y/Better-Typing/releases/download/"),
+					language.code() + " downloads from the GitHub release");
 			}
 		}
 		assertEquals(languages.size(), languages.stream().map(LanguagePacks.Language::code).distinct().count());

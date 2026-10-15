@@ -10,7 +10,7 @@
 
 **Chat words**: a language's list of words common in Minecraft chat (`en_us.chat.txt`), most common first. Part of the language dictionary: they rank higher than their book frequency, and the ones the dictionary lacks ("gg", "afk") count as correct. Languages without their own get the shared gaming slang in `chat.txt`.
 
-**Language pack**: a language that isn't bundled with the mod: a small jar holding one word list, downloaded when the player picks that language (`LanguagePacks`). The mod's catalog (`languages.txt`) pins each pack's size and SHA-512, so it keeps only that exact file, from Modrinth or the GitHub release. Packs installed as mods work too. Elisions in a list (`l'`, `dell'`) aren't words but let a word follow them.
+**Language pack**: a language that isn't bundled with the mod: a small jar holding one word list, downloaded when the player picks that language (`LanguagePacks`). The mod's catalog (`languages.txt`) pins each pack's size, SHA-512 and URL on the GitHub release, so it keeps only that exact file. Packs installed as mods work too. Elisions in a list (`l'`, `dell'`) aren't words but let a word follow them.
 
 **Misspelling**: a word not found in any word source. Underlined with a red squiggle, except the word being typed at the cursor, until it's finished.
 

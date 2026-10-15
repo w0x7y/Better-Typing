@@ -33,8 +33,8 @@ import java.util.zip.ZipFile;
 /**
  * The languages the mod can use: bundled in its jar, or downloaded as language packs.
  *
- * <p>The catalog ({@code languages.txt}) pins each pack's size and SHA-512, so a download is only kept
- * when it's exactly that file, whichever mirror it came from. Packs are saved as
+ * <p>Packs come from the mod's GitHub release. The catalog ({@code languages.txt}) pins each one's URL,
+ * size and SHA-512, so a download is only kept when it's exactly that file. Packs are saved as
  * {@code <code>.jar} in one folder and read straight from there. A pack a launcher installed as a mod
  * is on the classpath, so the bundled source finds it.
  */
@@ -55,8 +55,8 @@ public final class LanguagePacks {
 	public record Language(String code, String name, List<String> gameLanguages, Pack pack) {
 	}
 
-	/** A downloadable pack: its exact size and SHA-512, and where to get it, tried in order. */
-	public record Pack(long size, String sha512, List<URI> urls) {
+	/** A downloadable pack: its exact size and SHA-512, and where to get it. */
+	public record Pack(long size, String sha512, URI url) {
 	}
 
 	/** Fetches a URL. Implemented over {@link HttpClient} by {@link #standardHttp}; tests use their own. */
@@ -90,7 +90,7 @@ public final class LanguagePacks {
 
 	/**
 	 * Reads a catalog: one language per line, tab-separated: code, name, the other game languages it's
-	 * used for (space-separated), and for a pack its size, SHA-512 and https URLs (space-separated).
+	 * used for (space-separated), and for a pack its size, SHA-512 and https URL.
 	 * Blank lines and lines starting with # are skipped.
 	 */
 	public static List<Language> readCatalog(InputStream in) throws IOException {
@@ -110,18 +110,14 @@ public final class LanguagePacks {
 			List<String> gameLanguages = fields[2].isBlank() ? List.of() : List.of(fields[2].strip().split(" +"));
 			Pack pack = null;
 			if (fields.length == 6) {
-				List<URI> urls = new ArrayList<>();
-				for (String url : fields[5].strip().split(" +")) {
-					URI uri = URI.create(url);
-					if (!"https".equals(uri.getScheme())) {
-						throw new IOException("Catalog line " + number + " has a URL that isn't https: " + url);
-					}
-					urls.add(uri);
+				URI url = URI.create(fields[5].strip());
+				if (!"https".equals(url.getScheme())) {
+					throw new IOException("Catalog line " + number + " has a URL that isn't https: " + url);
 				}
 				if (!SHA512.matcher(fields[4]).matches()) {
 					throw new IOException("Bad SHA-512 on catalog line " + number);
 				}
-				pack = new Pack(Long.parseLong(fields[3]), fields[4], List.copyOf(urls));
+				pack = new Pack(Long.parseLong(fields[3]), fields[4], url);
 			}
 			languages.add(new Language(fields[0], fields[1], gameLanguages, pack));
 		}
@@ -228,8 +224,8 @@ public final class LanguagePacks {
 	}
 
 	/**
-	 * Downloads a language's pack unless it's already here. Tries each URL until one gives exactly the
-	 * pinned file, which then replaces any older pack. Blocks; call it off the game thread.
+	 * Downloads a language's pack unless it's already here. Only the pinned file is kept, replacing any
+	 * older pack. Blocks; call it off the game thread.
 	 */
 	public void download(String code) throws IOException {
 		Language language = catalog.get(code);
@@ -241,29 +237,22 @@ public final class LanguagePacks {
 		}
 		Pack pack = language.pack();
 		Files.createDirectories(dir);
-		IOException failures = new IOException("Couldn't download the " + code + " pack");
-		for (URI url : pack.urls()) {
-			Path part = Files.createTempFile(dir, code, ".part");
-			try {
-				String sha512;
-				try (InputStream body = http.get(url); OutputStream out = Files.newOutputStream(part)) {
-					sha512 = copyAndHash(body, out, pack.size());
-				}
-				if (Files.size(part) != pack.size() || !sha512.equals(pack.sha512())) {
-					throw new IOException(url + " gave a different file than the catalog pins");
-				}
-				Files.move(part, file(code), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-				synchronized (this) {
-					verified.put(code, true);
-				}
-				return;
-			} catch (IOException e) {
-				failures.addSuppressed(e);
-			} finally {
-				Files.deleteIfExists(part);
+		Path part = Files.createTempFile(dir, code, ".part");
+		try {
+			String sha512;
+			try (InputStream body = http.get(pack.url()); OutputStream out = Files.newOutputStream(part)) {
+				sha512 = copyAndHash(body, out, pack.size());
 			}
+			if (Files.size(part) != pack.size() || !sha512.equals(pack.sha512())) {
+				throw new IOException(pack.url() + " gave a different file than the catalog pins");
+			}
+			Files.move(part, file(code), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			synchronized (this) {
+				verified.put(code, true);
+			}
+		} finally {
+			Files.deleteIfExists(part);
 		}
-		throw failures;
 	}
 
 	/** Where dictionary files come from: the bundled ones first, then downloaded packs. */

@@ -38,7 +38,7 @@ on a sign, when the list would cover a line you wrote, it goes below the word or
 
 english with american or british spelling comes with the mod. german, spanish, french, italian, dutch, brazilian portuguese and swedish are a download each, about 1 mb
 
-pick one in the settings and press save. the mod downloads it from modrinth, or github if modrinth can't be reached, and only keeps it if its sha-512 matches the one written into the mod. it's saved to `config/bettertyping/dictionaries/`. a pack can also go in the mods folder like any mod, for modpacks or playing offline. nothing is downloaded unless you pick a language
+pick one in the settings and press save. the mod downloads it from [this repo's releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.0.0) and only keeps it if its sha-512 matches the one written into the mod. it's saved to `config/bettertyping/dictionaries/`. a pack can also go in the mods folder like any mod, for modpacks or playing offline. nothing is downloaded unless you pick a language
 
 the default, game language, uses the game's language when it's installed, and american english otherwise
 
@@ -138,7 +138,7 @@ each pack is a small fabric mod jar with one word list: the words of [wordfreq](
 
 the packs are **gpl-3.0**, because wordfreq's data is cc by-sa 4.0. they're separate downloads, so the mod stays mit. each jar's `NOTICE.txt` lists its sources and how it was made
 
-`tools/language_packs.json` pins the libreoffice commit, every source file's sha-256 and the wordfreq version. `common/src/main/resources/assets/bettertyping/languages.txt` pins each pack's size, sha-512 and download urls
+`tools/language_packs.json` pins the libreoffice commit, every source file's sha-256 and the wordfreq version. `common/src/main/resources/assets/bettertyping/languages.txt` pins each pack's size, sha-512 and download url
 
 <details>
 <summary>rebuilding and publishing them</summary>
@@ -152,7 +152,7 @@ python3 -m venv venv && venv/bin/pip install wordfreq==3.1.1 spylls==0.1.7
 venv/bin/python tools/build_language_packs.py --sources dictionaries --out packs   # about 15 minutes
 ```
 
-it prints a catalog line per pack: put the size and sha-512 into `languages.txt`. then attach the jars to a github release (`languages-<version>`) and run the "publish language packs" workflow on it, which creates a draft modrinth project per language and uploads the pack. add each modrinth url in front of the github one
+it prints a catalog line per pack: put the size and sha-512 into `languages.txt`, attach the jars to a new github release (`languages-<version>`) and point each url at it
 
 </details>
 

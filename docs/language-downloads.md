@@ -6,7 +6,7 @@ Researched 2026-10-14 for the roadmap item "more languages and british spelling 
 
 - **British English is bundled**, built like American English with ESDB's British lists. Its chat words only change "armor" to "armour".
 - **Seven language packs**: German, Spanish (Spain and Mexico dictionaries together), French, Italian, Dutch, Brazilian Portuguese and Swedish. `tools/build_language_packs.py` walks wordfreq's list for the language, most common first, and keeps each word the LibreOffice dictionary accepts (checked with spylls, a Python port of Hunspell), up to 200k. Checking wordfreq's words, rather than expanding the dictionary, also keeps German, Dutch and Swedish compounds that people actually write.
-- **Pinned, not "newest"**: the mod's catalog (`languages.txt`) pins each pack's size and SHA-512 and lists its URLs, Modrinth first and the GitHub release (`languages-1.0.0`) after. The mod tries them in order and keeps only the pinned file, so a new pack needs a mod update, and no host can swap the file. There's no Modrinth API call.
+- **GitHub only, pinned**: the packs are assets of the GitHub release `languages-1.0.0`, not Modrinth projects. Seven extra projects next to the mod would be confusing and clutter Modrinth. The mod's catalog (`languages.txt`) pins each pack's URL, size and SHA-512 and keeps only that file, so a new pack needs a mod update and nobody can swap the file. There's no API call.
 - **Picked in the settings**: the language option lists every language; one that isn't installed shows its download size and is downloaded when you press Save. The default, "Game language", uses the game's language only if it's installed, and never downloads.
 - **Elisions**: French and Italian lists end with the elisions their dictionary allows (`l'`, `dell'`), which let a word follow them. Our tokenizer keeps "l'homme" as one word, and wordfreq splits it, so without them every elided word would be flagged.
 - **Chat words for every language**: `chat.txt` holds gaming slang and Minecraft words (gg, afk, pvp) for languages without their own chat list.
@@ -201,6 +201,5 @@ So the first batch works as flat lists today. The second batch needs a compact w
 
 ## Open questions
 
-- One Modrinth project per language means 7 projects to get approved. Moderators decide on data-only projects case by case; until then downloads come from GitHub.
 - Modrinth still returns 404 for Better Typing itself, so the mod's project may also still be waiting for approval.
 - Ukrainian needs its licence checked before it can be offered.

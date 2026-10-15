@@ -45,9 +45,9 @@ English with American or British spelling comes with the mod. German, Spanish, F
 Brazilian Portuguese and Swedish are a download each, about 1 MB.
 
 Pick one in the settings and press Save. Only then does the mod connect to the internet: it downloads the
-language from its Modrinth project, or from GitHub if Modrinth can't be reached, and keeps it only if its
-SHA-512 matches the one written into the mod. You can also install a language like any mod, for a
-modpack or to play offline.
+language from the mod's [GitHub releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.0.0)
+and keeps it only if its SHA-512 matches the one written into the mod. You can also put a language's jar
+in the mods folder like any mod, for a modpack or to play offline.
 
 The default, Game language, uses the game's language when it's installed, and American English otherwise.
 
