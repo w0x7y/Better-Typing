@@ -80,7 +80,8 @@
       "game_languages": [
         "de_at",
         "de_ch"
-      ]
+      ],
+      "eszett": true
     },
     "es_es": {
       "name": "Español",

@@ -105,6 +105,15 @@ def arabic_hamza(token):
     return forms - {token}
 
 
+def eszett(token):
+    """German spellings of a token wordfreq folded ß into: weiss -> weiß, strasse -> straße."""
+    positions = [i for i in range(len(token) - 1) if token[i:i + 2] == "ss"]
+    forms = {token}
+    for position in positions:
+        forms |= {form[:position] + "ß" + form[position + 2:] for form in forms if form[position:position + 2] == "ss"}
+    return forms - {token}
+
+
 SPELLINGS = {"arabic_hamza": arabic_hamza}
 
 
@@ -143,11 +152,17 @@ def words(code, language, sources, max_words):
             form = token if accepted(token + "'") else None
             if form is None and language.get("spelling"):
                 form = token if any(accepted(variant) for variant in SPELLINGS[language["spelling"]](token)) else None
-        if form and form not in seen:
-            seen.add(form)
-            kept.append(form)
-            if len(kept) >= max_words:
-                break
+        forms = [form] if form else []
+        if language.get("eszett"):
+            # wordfreq writes ß as ss, so the dictionary's ß spellings are found here (weiß; Masse and Maße).
+            forms += [variant for spelling in eszett(token) for variant in (spelling, capitalized(spelling)) if accepted(variant)]
+        for form in forms:
+            if form not in seen:
+                seen.add(form)
+                kept.append(form)
+        if len(kept) >= max_words:
+            del kept[max_words:]
+            break
     print(f"{code}: {len(kept)} words", file=sys.stderr, flush=True)
     return kept
 
@@ -165,6 +180,10 @@ def notice(code, language, config, count, elided, commit):
         f"capitalized, or in capitals when the dictionary lists them so (ZDF). Numbers and single letters were "
         f"left out, and the list stops at "
         f"{config['max_words']:,} words. It ends up with {count:,}.", "1. ")]
+    if language.get("eszett"):
+        steps.append(wrap(
+            "wordfreq writes ß as ss, so each word was also checked with ß in place of ss, and every spelling "
+            "the dictionary accepts was kept (weiß; Masse and Maße).", f"{len(steps) + 1}. "))
     if language.get("spelling") == "arabic_hamza":
         steps.append(wrap(
             "Words spelled without their hamza, as often in chat (انا for أنا), were kept when the dictionary "
