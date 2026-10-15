@@ -1,0 +1,97 @@
+{
+  "pack_version": "1.0.0",
+  "max_words": 200000,
+  "wordfreq_version": "3.1.1",
+  "spylls_version": "0.1.7",
+  "libreoffice_commit": "67032ee957631908098a72edf48dc81cac27e369",
+  "libreoffice_date": "2026-10-12",
+  "gpl_text": "de/COPYING_GPLv3",
+  "files": {
+    "de/COPYING_GPLv3": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+    "de/de_DE_frami.aff": "646bf3333ac69c23e9d794533ee5241d6f755c359e8fe10a648f87613743d594",
+    "de/de_DE_frami.dic": "4ca3c958b0e5545910999bc246f668840bf8ede3df8e5e6790d05edd5a586c38",
+    "de/README_de_DE_frami.txt": "c141f4f79c428b7348b5012836f4ad3db4d124f288f15effc22696dc876512ae",
+    "es/es_ES.aff": "e73a9bf8e1383f4986a5dc9e2fbed49371c0c61f511c626d15586bd433c1cad9",
+    "es/es_ES.dic": "6975dddec3d5d2c676069537bc67b4b5f786c65c5d4cf6703a82acf779ac9ec1",
+    "es/es_MX.aff": "d966cb748e4a688ed75ec84b50c0835ac438e5325ee4fce703a093794f9cba7e",
+    "es/es_MX.dic": "44ce35af220962c68f97962776639bef271f7d90a85ba924b539a36e33315f82",
+    "es/LICENSE.md": "2b70fd5cb8d3b34cc6ae322c969557a2270b99017594addb2531ef5ffd9e1b17",
+    "es/README_hunspell_es.txt": "0b5c39a863ecb61f5c5631ec1cd977667ef9bda6da6f90e80e9fc0edcbfadd97",
+    "fr_FR/dictionaries/fr.aff": "c176610cd5dc4846806a65ddd029f422d87978bf58f224aa44222662a16a2de5",
+    "fr_FR/dictionaries/fr.dic": "b78a868e31dd6e373b6c3217969afb898a9acde828a5e7ef97308da42218c88c",
+    "fr_FR/dictionaries/README_dict_fr.txt": "4a25abf740ad6ba5e8d0cfc0d2ffadc3c13c303f8fe389f323b061a389350f83",
+    "it_IT/it_IT.aff": "951afaa19272f13555b8823e8bcf9ccf78f8fe1a07835bdfb912ab3e4d537c2b",
+    "it_IT/it_IT.dic": "bae1e3501dcd2a923669592493b3fde6c02aae7c7aab83bf5e5b49077e73dd64",
+    "it_IT/README_it_IT.txt": "34c3e93595cf3cf5f3afc9bc0d98eea12593750383f1e82ed1d3ca29f9681283",
+    "nl_NL/LICENSE.txt": "2189c248cbc054445aeac6cd65b87eebd0a115efeb55ed498b0f2a73441805dd",
+    "nl_NL/nl_NL.aff": "f0233d4f721f4661cf5f4d05ed2739549322bf3b6b66764b55a38257e1e16e6f",
+    "nl_NL/nl_NL.dic": "bc28af45307700a9927ad5719184da44dfd7eed4f707b8c1477f6d8a21b586a6",
+    "nl_NL/README.md": "aa4685a78f32d0d24a67dd5043ef4e39acc8720c3e416fe5d201985980dbc004",
+    "pt_BR/pt_BR.aff": "21d8ad2a769a60e17e2b5ea4ef11d4d593a58b9e2a82d642ef82d6a4c5523865",
+    "pt_BR/pt_BR.dic": "a38bfb26b68ece2834e79fe83e48d5792652970ace12db89d1b9674bf9933183",
+    "pt_BR/README_en.txt": "bb064f3db7ba5f5536da7d079773f692c5f928822e8aebc3d78259ff6cceb9e5",
+    "pt_BR/README_pt_BR.txt": "9974ce691fdc1fe731717d7a2dc668244405fdc2bf9bf3367eb9b29e85177c88",
+    "sv_SE/dictionaries/sv_SE.aff": "b721c9d44bee912feb182b601a1bc2ae3e7dffef660f4130cf2751867488a9dd",
+    "sv_SE/dictionaries/sv_SE.dic": "384a2126eff333f5f6f9790ae892554546f53948d2988c600397cb5ad6ce66e8",
+    "sv_SE/LICENSE_en_US.txt": "1314b6004bff32053ca25aca5fc419e905d75a6d49f9f9825baf4f02298af6d9",
+    "sv_SE/LICENSE_sv_SE.txt": "841736f210169ce2c9c6907c0d88495e6d41ff7d067a3033c56ae1179ce62127"
+  },
+  "languages": {
+    "de_de": {
+      "name": "Deutsch",
+      "english": "German",
+      "wordfreq": "de",
+      "hunspell": ["de/de_DE_frami"],
+      "upstream": ["de/README_de_DE_frami.txt"],
+      "credit": "igerman98 by Björn Jacke, with the frami additions by Franz Michael Baumann. Licensed under the GNU GPL version 2 or 3; used here under version 3."
+    },
+    "es_es": {
+      "name": "Español",
+      "english": "Spanish",
+      "wordfreq": "es",
+      "hunspell": ["es/es_ES", "es/es_MX"],
+      "upstream": ["es/LICENSE.md", "es/README_hunspell_es.txt"],
+      "credit": "The RLA-ES Spanish dictionaries for Spain and Mexico, started by Santiago Bosio, https://github.com/sbosio/rla-es. Licensed under the GNU GPL version 3 or later, the GNU LGPL version 3 or later, or the MPL version 1.1 or later; used here under the GNU GPL version 3."
+    },
+    "fr_fr": {
+      "name": "Français",
+      "english": "French",
+      "wordfreq": "fr",
+      "hunspell": ["fr_FR/dictionaries/fr"],
+      "upstream": ["fr_FR/dictionaries/README_dict_fr.txt"],
+      "credit": "The French spelling dictionaries, version 7.7, by Olivier R., https://grammalecte.net/. Licensed under the Mozilla Public License 2.0; the words taken from it are also available under that licence."
+    },
+    "it_it": {
+      "name": "Italiano",
+      "english": "Italian",
+      "wordfreq": "it",
+      "hunspell": ["it_IT/it_IT"],
+      "upstream": ["it_IT/README_it_IT.txt"],
+      "credit": "The LibreItalia Italian dictionary, copyright 2020-2022 LibreItalia - Marina Latini, portions copyright 2001-2015 other authors (see upstream/README_it_IT.txt). Licensed under the GNU GPL version 3."
+    },
+    "nl_nl": {
+      "name": "Nederlands",
+      "english": "Dutch",
+      "wordfreq": "nl",
+      "hunspell": ["nl_NL/nl_NL"],
+      "upstream": ["nl_NL/LICENSE.txt", "nl_NL/README.md"],
+      "credit": "The OpenTaal Dutch dictionary, https://opentaal.org. Licensed under the Revised BSD License and/or CC BY 3.0; used here under the Revised BSD License."
+    },
+    "pt_br": {
+      "name": "Português (Brasil)",
+      "english": "Portuguese (Brazil)",
+      "wordfreq": "pt",
+      "hunspell": ["pt_BR/pt_BR"],
+      "upstream": ["pt_BR/README_en.txt", "pt_BR/README_pt_BR.txt"],
+      "credit": "The VERO Brazilian Portuguese dictionary, copyright 2006-2013 Raimundo Santos Moura and contributors. Licensed under the GNU LGPL version 3 and the Mozilla Public License; used here under the GNU LGPL version 3."
+    },
+    "sv_se": {
+      "name": "Svenska",
+      "english": "Swedish",
+      "wordfreq": "sv",
+      "hunspell": ["sv_SE/dictionaries/sv_SE"],
+      "upstream": ["sv_SE/LICENSE_en_US.txt", "sv_SE/LICENSE_sv_SE.txt"],
+      "credit": "The Swedish dictionary by Göran Andersson, copyright 2003-2019. Licensed under the GNU LGPL version 3."
+    }
+  }
+}
