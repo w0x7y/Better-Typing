@@ -12,7 +12,9 @@ Needs the pinned wordfreq and spylls versions (pip install wordfreq==X spylls==Y
 LibreOffice dictionaries files at the pinned commit, e.g. from
 https://raw.githubusercontent.com/LibreOffice/dictionaries/<commit>/<path>, and the AGPL text from
 https://www.gnu.org/licenses/agpl-3.0.txt as licenses/agpl-3.0.txt. Every file is checked against its
-SHA-256 in the config. Prints one line per pack for the mod's language catalog.
+SHA-256 in the config. With --release, it also writes each built pack's line in the mod's language
+catalog (common/src/main/resources/assets/bettertyping/languages.txt): its size, SHA-512 and URL on
+that GitHub release, which the jars then have to be attached to.
 """
 import argparse
 import hashlib
@@ -27,6 +29,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "tools/language_packs.json"
+CATALOG = ROOT / "common/src/main/resources/assets/bettertyping/languages.txt"
 REPOSITORY = "https://github.com/w0x7y/Better-Typing"
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 
@@ -115,6 +118,14 @@ def words(code, language, sources, max_words):
     def accepted(form):
         return any(d.lookup(form) for d in dictionaries)
 
+    def listed_in_capitals(form):
+        # Hunspell accepts any word in capitals (WEISS for weiß); only keep capitals the dictionary lists (ZDF).
+        return any(d.dic.homonyms(form) for d in dictionaries)
+
+    def capitalized(word):
+        # Dutch capitalizes the IJ digraph as one letter: IJsland.
+        return "IJ" + word[2:] if word.startswith("ij") else word[:1].upper() + word[1:]
+
     kept = []
     seen = set()
     for token in wordfreq.iter_wordlist(language["wordfreq"], wordlist="best"):
@@ -122,10 +133,12 @@ def words(code, language, sources, max_words):
         if len(token) < 2 or any(c.isdigit() for c in token) or not any(c.isalpha() for c in token):
             continue
         # Lowercase covers the capitalized and all-caps forms too, so it's tried first.
-        for form in (token, token[:1].upper() + token[1:], token.upper()):
+        for form in (token, capitalized(token)):
             if accepted(form):
                 break
         else:
+            form = token.upper() if accepted(token.upper()) and listed_in_capitals(token.upper()) else None
+        if form is None:
             # Italian "po'" is checked without its apostrophe, as the mod strips apostrophes at word edges.
             form = token if accepted(token + "'") else None
             if form is None and language.get("spelling"):
@@ -149,7 +162,8 @@ def notice(code, language, config, count, elided, commit):
     steps = [wrap(
         f"Every word in wordfreq's {language['english']} list was checked against the LibreOffice dictionary, "
         f"most common first. Words it accepts were kept: in lowercase when the dictionary allows it, otherwise "
-        f"capitalized or in capitals. Numbers and single letters were left out, and the list stops at "
+        f"capitalized, or in capitals when the dictionary lists them so (ZDF). Numbers and single letters were "
+        f"left out, and the list stops at "
         f"{config['max_words']:,} words. It ends up with {count:,}.", "1. ")]
     if language.get("spelling") == "arabic_hamza":
         steps.append(wrap(
@@ -238,7 +252,20 @@ def build(code, config, sources, out, commit):
     jar = out / f"bettertyping-{code}-{config['pack_version']}.jar"
     write_jar(jar, {name: data.encode("utf-8") if isinstance(data, str) else data for name, data in entries.items()})
     data = jar.read_bytes()
-    return code, jar.name, len(data), hashlib.sha512(data).hexdigest(), len(kept)
+    return code, language["name"], jar.name, len(data), hashlib.sha512(data).hexdigest(), len(kept)
+
+
+def write_catalog(results, config, release):
+    """Replaces the packs' lines in the mod's catalog; the bundled languages' lines stay as they are."""
+    built = {code: (jar, size, digest) for code, _, jar, size, digest, _ in results}
+    lines = CATALOG.read_text(encoding="utf-8").splitlines()
+    kept = [line for line in lines if line.startswith("#") or len(line.split("\t")) == 3]
+    packs = {line.split("\t")[0]: line for line in lines if not line.startswith("#") and len(line.split("\t")) == 6}
+    for code, (jar, size, digest) in built.items():
+        language = config["languages"][code]
+        url = f"{REPOSITORY}/releases/download/{release}/{jar}"
+        packs[code] = "\t".join([code, language["name"], " ".join(language.get("game_languages", [])), str(size), digest, url])
+    CATALOG.write_text("\n".join(kept + [packs[code] for code in sorted(packs)]) + "\n", encoding="utf-8")
 
 
 def main():
@@ -246,6 +273,7 @@ def main():
     parser.add_argument("--sources", type=Path, required=True, help="folder holding the LibreOffice dictionaries files")
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--only", nargs="*", help="language codes to build, e.g. de_de")
+    parser.add_argument("--release", help="GitHub release the jars go on, e.g. languages-1.1.0; writes their catalog lines")
     args = parser.parse_args()
 
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
@@ -255,8 +283,11 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     with multiprocessing.Pool(len(codes)) as pool:
         results = pool.starmap(build, [(code, config, args.sources, args.out, commit) for code in codes])
-    for code, name, size, digest, count in results:
-        print(f"{code}\t{config['languages'][code]['name']}\t{name}\t{size}\t{digest}")
+    for code, name, jar, size, digest, count in results:
+        print(f"{code}\t{name}\t{jar}\t{size}\t{digest}\t{count} words")
+    if args.release:
+        write_catalog(results, config, args.release)
+        print(f"Wrote {len(results)} packs into {CATALOG.relative_to(ROOT)}; attach the jars to the {args.release} release")
 
 
 if __name__ == "__main__":

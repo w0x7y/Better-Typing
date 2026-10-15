@@ -1,5 +1,5 @@
 {
-  "pack_version": "1.0.0",
+  "pack_version": "1.1.0",
   "max_words": 200000,
   "wordfreq_version": "3.1.1",
   "spylls_version": "0.1.7",
@@ -76,7 +76,11 @@
       "upstream": [
         "de/README_de_DE_frami.txt"
       ],
-      "credit": "igerman98 by Björn Jacke, with the frami additions by Franz Michael Baumann. Licensed under the GNU GPL version 2 or 3; used here under version 3."
+      "credit": "igerman98 by Björn Jacke, with the frami additions by Franz Michael Baumann. Licensed under the GNU GPL version 2 or 3; used here under version 3.",
+      "game_languages": [
+        "de_at",
+        "de_ch"
+      ]
     },
     "es_es": {
       "name": "Español",
@@ -90,7 +94,15 @@
         "es/LICENSE.md",
         "es/README_hunspell_es.txt"
       ],
-      "credit": "The RLA-ES Spanish dictionaries for Spain and Mexico, started by Santiago Bosio, https://github.com/sbosio/rla-es. Licensed under the GNU GPL version 3 or later, the GNU LGPL version 3 or later, or the MPL version 1.1 or later; used here under the GNU GPL version 3."
+      "credit": "The RLA-ES Spanish dictionaries for Spain and Mexico, started by Santiago Bosio, https://github.com/sbosio/rla-es. Licensed under the GNU GPL version 3 or later, the GNU LGPL version 3 or later, or the MPL version 1.1 or later; used here under the GNU GPL version 3.",
+      "game_languages": [
+        "es_ar",
+        "es_cl",
+        "es_ec",
+        "es_mx",
+        "es_uy",
+        "es_ve"
+      ]
     },
     "fr_fr": {
       "name": "Français",
@@ -102,7 +114,10 @@
       "upstream": [
         "fr_FR/dictionaries/README_dict_fr.txt"
       ],
-      "credit": "The French spelling dictionaries, version 7.7, by Olivier R., https://grammalecte.net/. Licensed under the Mozilla Public License 2.0; the words taken from it are also available under that licence."
+      "credit": "The French spelling dictionaries, version 7.7, by Olivier R., https://grammalecte.net/. Licensed under the Mozilla Public License 2.0; the words taken from it are also available under that licence.",
+      "game_languages": [
+        "fr_ca"
+      ]
     },
     "he_il": {
       "name": "עברית",
@@ -142,7 +157,10 @@
         "nl_NL/LICENSE.txt",
         "nl_NL/README.md"
       ],
-      "credit": "The OpenTaal Dutch dictionary, https://opentaal.org. Licensed under the Revised BSD License and/or CC BY 3.0; used here under the Revised BSD License."
+      "credit": "The OpenTaal Dutch dictionary, https://opentaal.org. Licensed under the Revised BSD License and/or CC BY 3.0; used here under the Revised BSD License.",
+      "game_languages": [
+        "nl_be"
+      ]
     },
     "pt_br": {
       "name": "Português (Brasil)",
