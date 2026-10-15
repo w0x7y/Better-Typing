@@ -33,9 +33,13 @@ class LanguagePacksTest {
 	@TempDir
 	Path dir;
 
-	private final byte[] pack = jar("de_de.txt", "der\ndie\nHaus\n");
+	private final byte[] pack = jar("de_de.txt", "der\ndie\nHaus\nTür\n");
+	/** The mod's dictionary folder; reading a file whose content is "unreadable" fails. */
+	private final Map<String, String> bundled = new HashMap<>(Map.of("en_us.txt", "the\nhello\n", "en_us.chat.txt", "hello\ngg\n",
+		"chat.txt", "afk\n", "en_gb.txt", "colour\n"));
 	/** What each URL answers; a missing URL fails like a network error. */
 	private final Map<URI, byte[]> web = new HashMap<>();
+	private final List<String> skipped = new ArrayList<>();
 	private final List<URI> fetched = new ArrayList<>();
 	private LanguagePacks packs;
 
@@ -47,16 +51,22 @@ class LanguagePacksTest {
 			"en_gb\tEnglish (UK)\ten_au en_nz",
 			"de_de\tDeutsch\tde_at de_ch\t" + pack.length + "\t" + sha512(pack) + "\t" + RELEASE,
 			"");
-		Map<String, String> bundled = Map.of("en_us.txt", "the\nhello\n", "en_us.chat.txt", "gg\n", "en_gb.txt", "colour\n");
-		packs = new LanguagePacks(dir.resolve("dictionaries"), LanguagePacks.readCatalog(stream(catalog)),
-			name -> bundled.containsKey(name) ? stream(bundled.get(name)) : null,
-			uri -> {
+		packs = new LanguagePacks(dir.resolve("dictionaries"), LanguagePacks.readCatalog(stream(catalog)), this::openBundled,
+			(uri, maxBytes) -> {
 				fetched.add(uri);
 				if (!web.containsKey(uri)) {
 					throw new IOException("Can't reach " + uri);
 				}
 				return new ByteArrayInputStream(web.get(uri));
 			});
+	}
+
+	private InputStream openBundled(String file) throws IOException {
+		String content = bundled.get(file);
+		if ("unreadable".equals(content)) {
+			throw new IOException("Broken " + file);
+		}
+		return content == null ? null : stream(content);
 	}
 
 	private static ByteArrayInputStream stream(String text) {
@@ -88,7 +98,47 @@ class LanguagePacksTest {
 	}
 
 	private LanguageDictionary load(String... languages) {
-		return LanguageDictionary.loadFirst(List.of(languages), packs.source(), (language, e) -> { }).orElseThrow();
+		return packs.load(List.of(languages), (language, e) -> skipped.add(language)).orElseThrow();
+	}
+
+	@Test
+	void loadsTheFirstLanguageThatHasAWordList() {
+		LanguageDictionary english = load("xx_xx", "en_us");
+		assertEquals("en_us", english.language());
+		assertEquals(List.of("xx_xx"), skipped);
+	}
+
+	@Test
+	void everyLanguageGetsItsChatWordsAndTheSharedOnes() {
+		LanguageDictionary english = load("en_us");
+		assertTrue(english.words().contains("gg"));
+		assertTrue(english.words().contains("afk"));
+		assertTrue(load("en_gb").words().contains("afk"), "a language without its own chat words still gets the shared ones");
+	}
+
+	@Test
+	void downloadedPackUsesTheModsChatWordsAndRules() throws IOException {
+		bundled.put("de_de.chat.txt", "digga\n");
+		bundled.put("de_de.rules.txt", "compound.min_part=3\n");
+		web.put(RELEASE, pack);
+		packs.download("de_de");
+		LanguageDictionary german = load("de_de");
+		assertTrue(german.words().contains("digga"));
+		assertTrue(german.words().contains("afk"));
+		assertTrue(german.words().contains("Haustür"), "the rules file turns compounds on");
+	}
+
+	@Test
+	void unreadableLanguageIsSkipped() {
+		bundled.put("en_gb.txt", "unreadable");
+		assertEquals("en_us", load("en_gb", "en_us").language());
+		assertEquals(List.of("en_gb"), skipped);
+	}
+
+	@Test
+	void noLanguageFound() {
+		assertTrue(packs.load(List.of("xx_xx", "yy_yy"), (language, e) -> skipped.add(language)).isEmpty());
+		assertEquals(List.of("xx_xx", "yy_yy"), skipped);
 	}
 
 	@Test
@@ -132,11 +182,22 @@ class LanguagePacksTest {
 		packs.download("de_de");
 		byte[] tampered = jar("de_de.txt", "der\ndie\nHauss\n");
 		Files.write(dir.resolve("dictionaries/de_de.jar"), tampered);
-		LanguagePacks restarted = new LanguagePacks(dir.resolve("dictionaries"), packs.languages(), name -> null, uri -> {
+		LanguagePacks restarted = new LanguagePacks(dir.resolve("dictionaries"), packs.languages(), name -> null, (uri, maxBytes) -> {
 			throw new IOException("offline");
 		});
 		assertFalse(restarted.installed("de_de"));
-		assertNull(restarted.source().open("de_de.txt"));
+		assertTrue(restarted.load(List.of("de_de"), (language, e) -> skipped.add(language)).isEmpty());
+	}
+
+	@Test
+	void partialDownloadsFromBeforeAreCleanedUp() throws IOException {
+		Files.createDirectories(dir.resolve("dictionaries"));
+		Files.writeString(dir.resolve("dictionaries/de_de123.part"), "cut off");
+		web.put(RELEASE, pack);
+		packs.download("de_de");
+		try (var files = Files.list(dir.resolve("dictionaries"))) {
+			assertEquals(List.of("de_de.jar"), files.map(f -> f.getFileName().toString()).toList());
+		}
 	}
 
 	@Test
@@ -152,7 +213,7 @@ class LanguagePacksTest {
 	void bundledLanguagesNeedNoDownload() {
 		assertTrue(packs.installed("en_gb"));
 		assertThrows(IOException.class, () -> packs.download("en_gb"));
-		assertTrue(load("en_us").words().contains("gg"), "bundled chat words still load");
+		assertTrue(load("en_gb").words().contains("colour"));
 	}
 
 	@Test
@@ -193,8 +254,9 @@ class LanguagePacksTest {
 			assertTrue(Files.exists(Path.of("../common/src/main/resources/assets/bettertyping/dictionaries/" + language.code() + ".txt"))
 				!= (language.pack() != null), language.code() + " is either bundled or a pack");
 			if (language.pack() != null) {
-				assertTrue(language.pack().url().toString().startsWith("https://github.com/w0x7y/Better-Typing/releases/download/"),
-					language.code() + " downloads from the GitHub release");
+				assertTrue(language.pack().url().toString().matches(
+					"https://github\\.com/w0x7y/Better-Typing/releases/download/languages-[0-9.]+/bettertyping-" + language.code() + "-[0-9.]+\\.jar"),
+					language.code() + " downloads its own jar from a languages release: " + language.pack().url());
 			}
 		}
 		assertEquals(languages.size(), languages.stream().map(LanguagePacks.Language::code).distinct().count());
@@ -206,12 +268,14 @@ class LanguagePacksTest {
 		assertThrows(IOException.class, () -> LanguagePacks.readCatalog(stream("de_de\tDeutsch\t\t10\t" + hash + "\thttp://example.com/x.jar\n")));
 		assertThrows(IOException.class, () -> LanguagePacks.readCatalog(stream("de_de\tDeutsch\t\t10\tabc\thttps://example.com/x.jar\n")));
 		assertThrows(IOException.class, () -> LanguagePacks.readCatalog(stream("../x\tBad\t\n")));
+		assertThrows(IOException.class, () -> LanguagePacks.readCatalog(stream("de_de\tDeutsch\t\tlots\t" + hash + "\thttps://example.com/x.jar\n")));
+		assertThrows(IOException.class, () -> LanguagePacks.readCatalog(stream("de_de\tDeutsch\t\t10\t" + hash + "\thttps://exa mple.com/x.jar\n")));
+		assertThrows(IOException.class, () -> LanguagePacks.readCatalog(stream("en_us\tEnglish\t\nen_us\tEnglish again\t\n")), "repeated code");
 	}
 
 	@Test
-	void settingsCanNotNameAFile() throws IOException {
-		List<String> skipped = new ArrayList<>();
-		assertTrue(LanguageDictionary.loadFirst(List.of("../../secret"), packs.source(), (language, e) -> skipped.add(language)).isEmpty());
+	void settingsCanNotNameAFile() {
+		assertTrue(packs.load(List.of("../../secret"), (language, e) -> skipped.add(language)).isEmpty());
 		assertEquals(List.of("../../secret"), skipped);
 		assertFalse(packs.installed("../de_de"));
 	}

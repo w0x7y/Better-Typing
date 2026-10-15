@@ -10,6 +10,10 @@ public enum CaseStyle {
 	MIXED;
 
 	public static CaseStyle of(String word) {
+		// Dutch capitalizes the IJ digraph as one letter: "IJs" is "ijs" at the start of a sentence.
+		if (word.length() > 2 && word.startsWith("IJ") && of(word.substring(2)) == LOWER && word.substring(2).chars().anyMatch(Character::isLowerCase)) {
+			return CAPITALIZED;
+		}
 		boolean anyLetter = false;
 		boolean allUpper = true;
 		boolean restLower = true;
@@ -50,6 +54,9 @@ public enum CaseStyle {
 	static String capitalize(String word) {
 		if (word.isEmpty()) {
 			return word;
+		}
+		if (word.startsWith("ij")) {
+			return "IJ" + word.substring(2);
 		}
 		return word.substring(0, 1).toUpperCase(Locale.ROOT) + word.substring(1);
 	}

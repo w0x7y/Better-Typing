@@ -30,6 +30,7 @@ public final class SettingsScreen {
 	}
 
 	public static Screen create(Screen parent) {
+		Languages.retryFailed();
 		Settings settings = BetterTyping.settings();
 		Settings defaults = new Settings();
 		return YetAnotherConfigLib.createBuilder()

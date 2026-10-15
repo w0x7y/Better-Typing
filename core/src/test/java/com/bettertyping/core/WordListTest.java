@@ -2,12 +2,14 @@ package com.bettertyping.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +97,21 @@ class WordListTest {
 		assertTrue(hebrew.contains("שָׁלוֹם"), "vowel marks don't matter");
 		assertFalse(hebrew.contains("שלוםם"));
 		assertEquals(CaseStyle.LOWER, CaseStyle.of("שלום"));
+	}
+
+	@Test
+	void aLongRunOfLettersIsQuickToCheck() throws IOException {
+		WordList german = german();
+		assertTimeoutPreemptively(Duration.ofSeconds(1), () -> assertFalse(german.contains("Haus" + "ha".repeat(2_000))));
+	}
+
+	@Test
+	void dutchCapitalizesIjAsOneLetter() throws IOException {
+		WordList dutch = WordList.language(lines("ijs", "IJsland"), InputStream.nullInputStream());
+		assertTrue(dutch.contains("IJs"), "sentence start");
+		assertTrue(dutch.contains("IJsland"));
+		assertEquals(CaseStyle.CAPITALIZED, CaseStyle.of("IJs"));
+		assertEquals("IJs", CaseStyle.CAPITALIZED.apply("ijs"));
 	}
 
 	private static InputStream lines(String... lines) {

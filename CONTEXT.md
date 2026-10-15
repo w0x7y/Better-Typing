@@ -12,6 +12,8 @@
 
 **Language pack**: a language that isn't bundled with the mod: a small jar holding one word list, downloaded when the player picks that language (`LanguagePacks`). The mod's catalog (`languages.txt`) pins each pack's size, SHA-512 and URL on the GitHub release, so it keeps only that exact file. Packs installed as mods work too. Elisions in a list (`l'`, `dell'`) aren't words but let a word follow them.
 
+**Dictionary selection**: keeping the language dictionary in step with the player's languages and the game's (`DictionarySelection`): it loads the first installed one, downloads a chosen pack that's missing or whose pinned file changed, and drops a load a newer choice overtook. "Game language" never downloads, and a failed download is tried again when the settings open or the game restarts.
+
 **Compound**: a word made of known words joined together (German "Diamantschwert"), accepted in languages whose rules file (`de_de.rules.txt`) says how parts join: linking letters, endings a part can drop, and how many of the most common words can't be parts. The last part decides the capitalization.
 
 **Misspelling**: a word not found in any word source. Underlined with a red squiggle, except the word being typed at the cursor, until it's finished.

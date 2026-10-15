@@ -28,7 +28,7 @@ class SpellCheckerTest {
 	@BeforeAll
 	static void loadDictionary() throws IOException {
 		try (InputStream in = Files.newInputStream(DICTIONARY)) {
-			english = WordList.fromRankedLines(in);
+			english = WordList.language(in, InputStream.nullInputStream());
 		}
 		try (InputStream in = Files.newInputStream(DICTIONARY); InputStream chat = Files.newInputStream(CHAT_WORDS)) {
 			englishWithChat = WordList.language(in, chat);
@@ -106,7 +106,17 @@ class SpellCheckerTest {
 		SpellChecker checker = checker(french);
 		assertEquals(List.of("l'homme"), checker.suggest("l'homem", 3));
 		assertEquals(List.of("L'homme", "L'histoire"), checker.complete("L'h", 3));
+		WordList withApostrophes = WordList.language(new java.io.ByteArrayInputStream("homme\naujourd'hui\nquelqu'un\n".getBytes()), InputStream.nullInputStream());
+		assertEquals(List.of("aujourd'hui"), checker(withApostrophes).complete("aujou", 3));
 		assertTrue(checker.misspelled("l'homme est").isEmpty());
+	}
+
+	@Test
+	void apostropheWordsAreOfferedButPossessivesWaitForAnApostrophe() {
+		SpellChecker checker = checker();
+		assertEquals("don't", checker.suggest("dont", 3).get(0));
+		assertFalse(checker.suggest("dogz", 3).contains("dog's"), "got " + checker.suggest("dogz", 3));
+		assertTrue(checker.suggest("dogg's", 3).contains("dog's"), "got " + checker.suggest("dogg's", 3));
 	}
 
 	@Test

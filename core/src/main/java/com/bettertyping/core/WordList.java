@@ -114,11 +114,6 @@ public final class WordList {
 		}
 	}
 
-	/** A case-sensitive list where each line is a word and the line number is its rank. */
-	public static WordList fromRankedLines(InputStream in) throws IOException {
-		return new WordList(readRanked(in), true, Compounds.NONE);
-	}
-
 	/**
 	 * A language dictionary (ranked lines) with the words of {@code chatWords} moved up. The dictionary
 	 * is ranked by how often words appear in books, which rarely say "hello" or "thanks", so the n-th
@@ -207,11 +202,13 @@ public final class WordList {
 		}
 		boolean[] partStarts = new boolean[length];
 		partStarts[0] = true;
+		// No part is longer than the longest word, which keeps a long run of letters cheap to check.
+		int longestPart = byLength.size() - 1;
 		for (int start = 0; start < length; start++) {
 			if (!partStarts[start]) {
 				continue;
 			}
-			for (int end = start + compounds.minPart(); end <= length; end++) {
+			for (int end = start + compounds.minPart(); end <= Math.min(length, start + longestPart); end++) {
 				String part = lower.substring(start, end);
 				if (end == length) {
 					if (start > 0 && isPart(part) && containsWord(style.apply(part))) {
@@ -296,10 +293,11 @@ public final class WordList {
 		int to = Math.min(byLength.size() - 1, lower.length() + maxDistance);
 		for (int length = from; length <= to; length++) {
 			for (String key : byLength.get(length)) {
-				if (!allowPossessive && key.indexOf('\'') >= 0) {
+				if (!allowPossessive && isPossessive(key)) {
 					continue;
 				}
-				int distance = EditDistance.bounded(lower, key, maxDistance);
+				// A word that only lacks its apostrophes ("dont" for "don't") is the likeliest fix, so it comes first.
+				int distance = key.indexOf('\'') >= 0 && key.replace("'", "").equals(lower) ? 0 : EditDistance.bounded(lower, key, maxDistance);
 				if (distance <= maxDistance) {
 					out.add(new Candidate(lowerDisplay.get(key), distance, lowerRank.get(key)));
 				}
@@ -320,11 +318,19 @@ public final class WordList {
 		}
 		for (; i < sortedLower.length && sortedLower[i].startsWith(lower); i++) {
 			String key = sortedLower[i];
-			if (key.equals(lower) || (!allowPossessive && key.indexOf('\'') >= 0)) {
+			if (key.equals(lower) || (!allowPossessive && isPossessive(key))) {
 				continue;
 			}
 			out.add(new Candidate(lowerDisplay.get(key), 0, lowerRank.get(key)));
 		}
+	}
+
+	/**
+	 * English possessives ("dog's") aren't offered for a word typed without an apostrophe, or they'd crowd
+	 * out the plain word. Other apostrophe words ("don't", "aujourd'hui") are.
+	 */
+	private static boolean isPossessive(String key) {
+		return key.endsWith("'s");
 	}
 
 	/** A suggested word with its edit distance from the input and its popularity rank. */

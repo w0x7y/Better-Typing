@@ -3,3 +3,8 @@
 - German, Dutch and Swedish accept compound words made of known words, like Diamantschwert
 - xD counts as correct
 - Arabic and Hebrew words keep working with vowel marks typed in, and Hebrew acronyms like צה"ל count as one word
+- "dont" suggests "don't" first, and words with an apostrophe (aujourd'hui) show up in suggestions and autocomplete
+- Dutch capitals work with IJ (IJsland, IJs), and German, Dutch and French no longer suggest words in all capitals
+- A chosen language whose download failed is tried again when you open the settings or restart, and a stuck download gives up after two minutes
+- German accepts words spelled with ß (weiß, groß, Straße), which the first German pack missed
+- Language packs are updated to 1.1.0 and downloaded again automatically
