@@ -1,7 +1,7 @@
 package com.bettertyping.field;
 
-import com.bettertyping.core.TextLayout;
 import com.bettertyping.core.TextState;
+import com.bettertyping.core.TypingField;
 import com.bettertyping.mixin.MultiLineEditBoxAccessor;
 import com.bettertyping.mixin.MultilineTextFieldAccessor;
 import com.bettertyping.mixin.TextAreaWidgetInvoker;
@@ -17,7 +17,7 @@ import net.minecraft.network.chat.Style;
  * A page of a book and quill. The book screen reuses one text box for every page, so the page number
  * is part of the key: each page gets its own undo history.
  */
-record BookPageField(MultiLineEditBox box, int page, boolean assist) implements Field {
+record BookPageField(MultiLineEditBox box, int page, boolean assist) implements TypingField {
 	private record Key(int page) {
 	}
 
@@ -54,7 +54,7 @@ record BookPageField(MultiLineEditBox box, int page, boolean assist) implements 
 
 	/** Wraps the text the same way the text box does, keeping the lines that aren't scrolled out of view. */
 	@Override
-	public List<TextLayout.Line> lines() {
+	public List<Line> lines() {
 		MultilineTextField field = textField();
 		MultilineTextFieldAccessor fieldData = (MultilineTextFieldAccessor) field;
 		Font font = fieldData.bettertyping$font();
@@ -65,13 +65,18 @@ record BookPageField(MultiLineEditBox box, int page, boolean assist) implements 
 		TextAreaWidgetInvoker area = (TextAreaWidgetInvoker) box;
 		int left = area.bettertyping$innerLeft();
 		int top = area.bettertyping$innerTop() - (int) box.scrollAmount();
-		List<TextLayout.Line> lines = new ArrayList<>();
+		List<Line> lines = new ArrayList<>();
 		for (int i = 0; i < wrapped.size(); i++) {
 			int y = top + i * font.lineHeight;
 			if (y >= box.getY() && y + font.lineHeight <= box.getY() + box.getHeight()) {
-				lines.add(new TextLayout.Line(wrapped.get(i)[0], wrapped.get(i)[1], left, y, 1));
+				lines.add(new Line(wrapped.get(i)[0], wrapped.get(i)[1], left, y, 1));
 			}
 		}
 		return lines;
+	}
+
+	@Override
+	public int textWidth(String text) {
+		return ((MultilineTextFieldAccessor) textField()).bettertyping$font().width(text);
 	}
 }

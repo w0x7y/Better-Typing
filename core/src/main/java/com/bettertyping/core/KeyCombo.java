@@ -1,5 +1,7 @@
 package com.bettertyping.core;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -9,6 +11,12 @@ import java.util.Locale;
  * matching a shortcut is plain equality.
  */
 public record KeyCombo(String key, boolean ctrl, boolean shift, boolean alt) {
+	/** Keys the mod handles itself while a suggestion list can be open. */
+	public static final String TAB = "tab";
+	public static final String ESCAPE = "escape";
+	/** Keys a shortcut can use. Tab, Space, Enter and Escape are left out: the mod and the game already use them. */
+	public static final List<String> SHORTCUT_KEYS = shortcutKeys();
+
 	public KeyCombo {
 		key = key.toLowerCase(Locale.ROOT);
 	}
@@ -47,5 +55,20 @@ public record KeyCombo(String key, boolean ctrl, boolean shift, boolean alt) {
 			text.append("alt+");
 		}
 		return text.append(key).toString();
+	}
+
+	private static List<String> shortcutKeys() {
+		List<String> keys = new ArrayList<>();
+		for (char c = 'a'; c <= 'z'; c++) {
+			keys.add(String.valueOf(c));
+		}
+		for (char c = '0'; c <= '9'; c++) {
+			keys.add(String.valueOf(c));
+		}
+		for (int i = 1; i <= 12; i++) {
+			keys.add("f" + i);
+		}
+		keys.addAll(List.of("backspace", "delete", "insert", "home", "end", "page.up", "page.down", "left", "right", "up", "down"));
+		return List.copyOf(keys);
 	}
 }

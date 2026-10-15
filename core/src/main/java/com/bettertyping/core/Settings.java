@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 
 /** Player settings, stored as a properties file. Unknown or broken values fall back to defaults. */
@@ -60,7 +61,14 @@ public final class Settings {
 
 	private static boolean bool(Properties props, String key, boolean fallback) {
 		String value = props.getProperty(key);
-		return value == null ? fallback : Boolean.parseBoolean(value.strip());
+		if (value == null) {
+			return fallback;
+		}
+		return switch (value.strip().toLowerCase(Locale.ROOT)) {
+			case "true" -> true;
+			case "false" -> false;
+			default -> fallback;
+		};
 	}
 
 	private static KeyCombo combo(Properties props, String key, KeyCombo fallback) {

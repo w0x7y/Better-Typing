@@ -73,10 +73,20 @@ class UndoHistoryTest {
 	}
 
 	@Test
-	void keyCombosParseAndMatch() {
-		KeyCombo redo = KeyCombo.parse("Ctrl+Shift+Z");
-		assertEquals("ctrl+shift+z", redo.toString());
-		assertEquals(new KeyCombo("Z", true, true, false), redo);
-		assertTrue(!redo.equals(KeyCombo.parse("ctrl+z")));
+	void groupsConsecutiveDeletes() {
+		history.reset(TextState.of("hello", 0));
+		history.observe(TextState.of("ello", 0), time += 10);
+		history.observe(TextState.of("llo", 0), time += 10);
+		assertEquals("hello", undo());
+	}
+
+	@Test
+	void shorterTextElsewhereIsItsOwnStep() {
+		// Like recalling an older chat message right after a backspace: one character shorter, but not at the cursor.
+		history.reset(TextState.of("hello", 5));
+		history.observe(TextState.of("hell", 4), time += 10);
+		history.observe(TextState.of("ell", 3), time += 10);
+		assertEquals("hell", undo());
+		assertEquals("hello", undo());
 	}
 }

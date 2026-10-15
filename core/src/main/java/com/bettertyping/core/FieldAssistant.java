@@ -1,7 +1,5 @@
 package com.bettertyping.core;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -72,7 +70,11 @@ final class FieldAssistant {
 		return true;
 	}
 
-	/** Accepts the highlighted suggestion. False when nothing is highlighted, so Space types normally. */
+	/**
+	 * Accepts the highlighted suggestion. False when nothing is highlighted, so Space types normally. A
+	 * field can refuse the new text (a full sign line): then a completion's Space types normally too, while
+	 * in a spelling list, where the cursor is inside the word, it's dropped.
+	 */
 	boolean space(TypingField field) {
 		if (!field.assist() || popup == null || popup.selected() < 0) {
 			return false;
@@ -82,11 +84,7 @@ final class FieldAssistant {
 		Popup.Item item = accepted.items().get(accepted.selected());
 		WordSpan word = accepted.word();
 		if (item.addToDictionary()) {
-			try {
-				checker.addPersonalWord(word.text());
-			} catch (IOException e) {
-				throw new UncheckedIOException(e);
-			}
+			checker.addPersonalWord(word.text());
 			return true;
 		}
 		String text = history.current().text();
@@ -104,7 +102,12 @@ final class FieldAssistant {
 			}
 			cursor++;
 		}
-		field.apply(TextState.of(before + replacement + after, cursor));
+		TextState requested = TextState.of(before + replacement + after, cursor);
+		field.apply(requested);
+		if (!field.state().text().equals(requested.text())) {
+			field.apply(history.current());
+			return accepted.mode() == Popup.Mode.SPELLING;
+		}
 		history.recordEdit(field.state());
 		return true;
 	}
@@ -123,25 +126,6 @@ final class FieldAssistant {
 
 	boolean redo(TypingField field) {
 		return restore(field, history.redo());
-	}
-
-	/**
-	 * Misspelled words to underline. In the focused field, the word being typed (ending at the cursor) is
-	 * left alone until it's finished.
-	 */
-	List<WordSpan> misspelled(TypingField field, boolean focused) {
-		if (!field.assist() || !settings.spellCheck) {
-			return List.of();
-		}
-		TextState state = field.state();
-		List<WordSpan> words = checker.misspelled(state.text());
-		WordSpan typing = focused && !state.hasSelection() ? Tokenizer.wordEndingAt(state.text(), state.cursor()) : null;
-		if (typing == null || words.isEmpty()) {
-			return words;
-		}
-		List<WordSpan> result = new ArrayList<>(words);
-		result.removeIf(word -> word.start() == typing.start() && word.end() == typing.end());
-		return result;
 	}
 
 	/** Undo/redo always consume the key, even with nothing left to undo. */

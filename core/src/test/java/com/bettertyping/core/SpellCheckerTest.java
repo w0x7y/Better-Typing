@@ -1,14 +1,15 @@
 package com.bettertyping.core;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -34,14 +35,14 @@ class SpellCheckerTest {
 		}
 	}
 
-	private SpellChecker checker() throws IOException {
+	private SpellChecker checker() {
 		return checker(english);
 	}
 
-	private SpellChecker checker(WordList language) throws IOException {
-		PersonalDictionary personal = new PersonalDictionary(tmp.resolve("personal.txt"));
-		personal.load();
-		SpellChecker checker = new SpellChecker(personal);
+	private SpellChecker checker(WordList language) {
+		SpellChecker checker = new SpellChecker(tmp.resolve("personal.txt"), e -> {
+			throw new AssertionError(e);
+		});
 		checker.setLanguage(language);
 		return checker;
 	}
@@ -111,26 +112,51 @@ class SpellCheckerTest {
 	void wordAddedWhileSavingFailsStillCountsAndIsNotUnderlined() throws IOException {
 		Path blocker = tmp.resolve("blocker");
 		Files.writeString(blocker, "a file where a folder should be");
-		PersonalDictionary personal = new PersonalDictionary(blocker.resolve("personal.txt"));
-		personal.load();
-		SpellChecker checker = new SpellChecker(personal);
+		List<IOException> errors = new ArrayList<>();
+		SpellChecker checker = new SpellChecker(blocker.resolve("personal.txt"), errors::add);
 		checker.setLanguage(english);
 		assertEquals(1, checker.misspelled("zqxw").size());
 
-		assertThrows(IOException.class, () -> checker.addPersonalWord("zqxw"));
+		checker.addPersonalWord("zqxw");
+		assertEquals(1, errors.size());
 		assertTrue(checker.isCorrect("zqxw"));
 		assertEquals(List.of(), checker.misspelled("zqxw"));
 	}
 
 	@Test
 	void personalDictionaryIsSaved() throws IOException {
-		Path file = tmp.resolve("words.txt");
-		PersonalDictionary personal = new PersonalDictionary(file);
-		personal.load();
-		personal.add("Skyblock");
-		PersonalDictionary reloaded = new PersonalDictionary(file);
-		reloaded.load();
-		assertTrue(reloaded.contains("skyblock"));
-		assertEquals(List.of("skyblock"), reloaded.all());
+		checker().addPersonalWord("Skyblock");
+		assertEquals(List.of("skyblock"), Files.readAllLines(tmp.resolve("personal.txt")));
+		SpellChecker reloaded = checker();
+		assertTrue(reloaded.isCorrect("Skyblock"));
+		assertEquals(List.of("skyblock"), reloaded.personalWords());
+	}
+
+	@Test
+	void settingPersonalWordsReplacesThemAndSplitsEntries() throws IOException {
+		SpellChecker checker = checker();
+		checker.addPersonalWord("Skyblock");
+		checker.addPersonalWord("gg'ez");
+		checker.setPersonalWords(List.of("  Bedwars  Skywars ", "", "gg’ez"));
+		assertEquals(List.of("bedwars", "gg'ez", "skywars"), checker.personalWords());
+		assertEquals(List.of("bedwars", "gg'ez", "skywars"), Files.readAllLines(tmp.resolve("personal.txt")));
+		assertFalse(checker.isCorrect("skyblock"));
+		assertTrue(checker.isCorrect("Skywars"));
+	}
+
+	@Test
+	void unreadablePersonalDictionaryIsLeftAlone() throws IOException {
+		Path file = tmp.resolve("personal.txt");
+		byte[] notUtf8 = {'c', 'a', 'f', (byte) 0xE9, '\n'};
+		Files.write(file, notUtf8);
+		List<IOException> errors = new ArrayList<>();
+		SpellChecker checker = new SpellChecker(file, errors::add);
+		checker.setLanguage(english);
+		assertEquals(1, errors.size(), "reading fails");
+
+		checker.addPersonalWord("zqxw");
+		assertTrue(checker.isCorrect("zqxw"));
+		assertEquals(2, errors.size(), "saving is refused");
+		assertArrayEquals(notUtf8, Files.readAllBytes(file));
 	}
 }

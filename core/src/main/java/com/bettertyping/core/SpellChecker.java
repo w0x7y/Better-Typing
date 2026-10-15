@@ -1,13 +1,16 @@
 package com.bettertyping.core;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 /**
@@ -45,8 +48,12 @@ public final class SpellChecker {
 	};
 	private Sources cachedFor;
 
-	public SpellChecker(PersonalDictionary personal) {
-		this.personal = personal;
+	/**
+	 * @param personalFile where the personal dictionary is kept: read now, written after every change
+	 * @param personalFileErrors told when that file can't be read or saved; added words still count until the game closes
+	 */
+	public SpellChecker(Path personalFile, Consumer<IOException> personalFileErrors) {
+		this.personal = new PersonalDictionary(personalFile, personalFileErrors);
 		this.sources = new Sources(null, WordList.EMPTY, personal.words());
 	}
 
@@ -58,25 +65,20 @@ public final class SpellChecker {
 		update(s -> new Sources(s.language(), gameWords, s.personal()));
 	}
 
-	/** Adds a word to the personal dictionary. It counts as correct even if saving the file fails. */
-	public void addPersonalWord(String word) throws IOException {
-		try {
-			personal.add(word);
-		} finally {
-			update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
-		}
+	/** Adds a word to the personal dictionary. */
+	public synchronized void addPersonalWord(String word) {
+		personal.add(word);
+		update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
 	}
 
-	public void removePersonalWord(String word) throws IOException {
-		try {
-			personal.remove(word);
-		} finally {
-			update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
-		}
+	/** Replaces the personal dictionary's words. Each entry can hold several words separated by spaces. */
+	public synchronized void setPersonalWords(Collection<String> entries) {
+		personal.set(entries);
+		update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
 	}
 
 	/** The personal dictionary's words, lowercase and sorted. */
-	public List<String> personalWords() {
+	public synchronized List<String> personalWords() {
 		return personal.all();
 	}
 

@@ -8,8 +8,8 @@ import java.util.Optional;
  * Undo/redo for one text field, built from observed states rather than hooked edits.
  *
  * <p>Consecutive typing is grouped into one step per word (the word plus the spaces after it), and
- * consecutive single-character deletes are grouped too. A pause, a cursor jump, a paste or any other
- * edit starts a new step.
+ * consecutive single-character deletes at the cursor are grouped too. A pause, a cursor jump, a paste
+ * or any other edit starts a new step.
  */
 public final class UndoHistory {
 	static final int MAX_STEPS = 200;
@@ -133,7 +133,12 @@ public final class UndoHistory {
 		}
 		int removed = -added;
 		if (removed >= 1 && removed <= 2 && a.codePointCount(0, a.length()) - b.codePointCount(0, b.length()) == 1) {
-			return Kind.DELETING;
+			// Backspace removes the character before the cursor, Delete the one after it.
+			boolean backspace = pos >= removed && b.startsWith(a.substring(0, pos - removed)) && b.endsWith(a.substring(pos));
+			boolean delete = pos + removed <= a.length() && b.startsWith(a.substring(0, pos)) && b.endsWith(a.substring(pos + removed));
+			if (backspace || delete) {
+				return Kind.DELETING;
+			}
 		}
 		return Kind.OTHER;
 	}

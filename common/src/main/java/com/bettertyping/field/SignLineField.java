@@ -1,12 +1,11 @@
 package com.bettertyping.field;
 
-import com.bettertyping.core.TextLayout;
 import com.bettertyping.core.TextState;
+import com.bettertyping.core.TypingField;
 import com.bettertyping.mixin.SignEditScreenAccessor;
 import com.bettertyping.version.signmixin.SignScaleInvoker;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.font.TextFieldHelper;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
 import org.joml.Vector3fc;
@@ -15,7 +14,7 @@ import org.joml.Vector3fc;
  * One of the four lines of a sign being edited. Only the current line has a cursor; the others are
  * still checked so their misspellings stay underlined.
  */
-record SignLineField(AbstractSignEditScreen screen, int line, boolean assist) implements Field {
+record SignLineField(AbstractSignEditScreen screen, int line, boolean assist) implements TypingField {
 	private record Key(int line) {
 	}
 
@@ -54,16 +53,21 @@ record SignLineField(AbstractSignEditScreen screen, int line, boolean assist) im
 
 	/** Mirrors how the sign screen centers each line, then moves and scales it onto the sign. */
 	@Override
-	public List<TextLayout.Line> lines() {
-		Font font = Minecraft.getInstance().font;
+	public List<Line> lines() {
 		String text = text();
 		int lineHeight = fields().bettertyping$sign().getTextLineHeight();
-		int lineLeft = -font.width(text) / 2;
+		int lineLeft = -textWidth(text) / 2;
 		int lineTop = line * lineHeight - 4 * lineHeight / 2;
 		// Signs scale text equally in x and y. The scale's type differs between versions (Vector3f / Vector3fc).
 		Vector3fc scale = ((SignScaleInvoker) screen).bettertyping$signTextScale();
 		float x = screen.width / 2.0F + lineLeft * scale.x();
 		float y = fields().bettertyping$signYOffset() + lineTop * scale.y();
-		return List.of(new TextLayout.Line(0, text.length(), x, y, scale.x()));
+		return List.of(new Line(0, text.length(), x, y, scale.x()));
+	}
+
+	/** The sign screen draws with the game's font. */
+	@Override
+	public int textWidth(String text) {
+		return Minecraft.getInstance().font.width(text);
 	}
 }

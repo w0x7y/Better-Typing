@@ -2,7 +2,7 @@ package com.bettertyping.core;
 
 import java.util.List;
 
-/** The suggestion list shown next to a word in a text field; {@link PopupPlacement} decides where. */
+/** The suggestion list shown next to a word in a text field; {@link OverlayLayout} decides where. */
 public final class Popup {
 	public enum Mode { AUTOCOMPLETE, SPELLING }
 

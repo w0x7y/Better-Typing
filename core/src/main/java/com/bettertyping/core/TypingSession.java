@@ -18,8 +18,7 @@ import java.util.Objects;
  * closes the suggestion list left open in the previous one.
  */
 public final class TypingSession {
-	private static final KeyCombo TAB = KeyCombo.parse("tab");
-	private static final String ESCAPE = "escape";
+	private static final KeyCombo TAB = new KeyCombo(KeyCombo.TAB, false, false, false);
 
 	private final SpellChecker checker;
 	private final Settings settings;
@@ -31,11 +30,14 @@ public final class TypingSession {
 		this.settings = settings;
 	}
 
-	/** What to draw: misspelled words in every field, and the suggestion list of the focused field (or null). */
-	public record Overlay<F extends TypingField>(List<Misspelling<F>> misspellings, Popup popup) {
+	/**
+	 * What to draw on the screen: misspelled words in every field, and the focused field's suggestion list
+	 * (or null). {@link OverlayLayout} works out where.
+	 */
+	public record Overlay(List<TypingField> fields, TypingField focused, List<Misspelling> misspellings, Popup popup) {
 	}
 
-	public record Misspelling<F extends TypingField>(F field, WordSpan word) {
+	public record Misspelling(TypingField field, WordSpan word) {
 	}
 
 	/** Returns true when the key was used and must not reach the game. */
@@ -52,36 +54,47 @@ public final class TypingSession {
 		if (pressed.equals(TAB)) {
 			return assistant.tab(focused);
 		}
-		if (pressed.key().equals(ESCAPE)) {
+		if (pressed.key().equals(KeyCombo.ESCAPE)) {
 			return assistant.escape();
 		}
 		return false;
 	}
 
-	/**
-	 * Returns true when the character was used and must not be typed.
-	 *
-	 * @throws java.io.UncheckedIOException if a word was added to the personal dictionary but saving it failed
-	 */
+	/** Returns true when the character was used and must not be typed. */
 	public boolean onChar(TypingField focused, int codepoint, long nowMs) {
 		FieldAssistant assistant = focus(focused, nowMs);
 		return codepoint == ' ' && assistant.space(focused);
 	}
 
 	/** Catches up with the focused field's edits, then reports what to draw. */
-	public <F extends TypingField> Overlay<F> overlay(List<F> fields, F focused, long nowMs) {
-		FieldAssistant focusedAssistant = focus(focused, nowMs);
-		List<Misspelling<F>> misspellings = new ArrayList<>();
-		for (F field : fields) {
-			for (WordSpan word : assistant(field).misspelled(field, field == focused)) {
-				misspellings.add(new Misspelling<>(field, word));
+	public Overlay overlay(List<? extends TypingField> fields, TypingField focused, long nowMs) {
+		Popup popup = focus(focused, nowMs).popup();
+		List<Misspelling> misspellings = new ArrayList<>();
+		for (TypingField field : fields) {
+			for (WordSpan word : misspelled(field, field == focused)) {
+				misspellings.add(new Misspelling(field, word));
 			}
 		}
-		return new Overlay<>(misspellings, focusedAssistant.popup());
+		return new Overlay(List.copyOf(fields), focused, misspellings, popup);
 	}
 
-	private FieldAssistant assistant(TypingField field) {
-		return assistants.computeIfAbsent(field.key(), key -> new FieldAssistant(checker, settings));
+	/**
+	 * Misspelled words to underline. In the focused field, the word being typed (ending at the cursor) is
+	 * left alone until it's finished.
+	 */
+	private List<WordSpan> misspelled(TypingField field, boolean focused) {
+		if (!field.assist() || !settings.spellCheck) {
+			return List.of();
+		}
+		TextState state = field.state();
+		List<WordSpan> words = checker.misspelled(state.text());
+		WordSpan typing = focused && !state.hasSelection() ? Tokenizer.wordEndingAt(state.text(), state.cursor()) : null;
+		if (typing == null || words.isEmpty()) {
+			return words;
+		}
+		List<WordSpan> result = new ArrayList<>(words);
+		result.removeIf(word -> word.start() == typing.start() && word.end() == typing.end());
+		return result;
 	}
 
 	private FieldAssistant focus(TypingField field, long nowMs) {
@@ -92,7 +105,7 @@ public final class TypingSession {
 			}
 			focusedKey = field.key();
 		}
-		FieldAssistant assistant = assistant(field);
+		FieldAssistant assistant = assistants.computeIfAbsent(field.key(), key -> new FieldAssistant(checker, settings));
 		assistant.sync(field, nowMs);
 		return assistant;
 	}

@@ -1,1 +1,7 @@
-- On a sign, when the suggestion list would cover a line you wrote, it now goes below the word or beside the text instead
+- Undo history in chat, the anvil and book titles survives resizing the window
+- When a suggestion doesn't fit (a full sign line, or chat at its length limit), Space types a space instead of doing nothing
+- Squiggles in chat line up with characters that chat draws differently
+- Saving the settings screen writes the personal dictionary once, and a word with a curly apostrophe is no longer removed and added back
+- If the personal dictionary file can't be read, adding a word no longer overwrites it
+- A setting such as `spell_check=yes` keeps its default instead of turning the feature off
+- Recalling an older chat message right after a backspace is its own undo step

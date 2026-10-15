@@ -1,13 +1,11 @@
 package com.bettertyping;
 
-import com.bettertyping.core.PersonalDictionary;
+import com.bettertyping.core.LanguageDictionary;
 import com.bettertyping.core.Settings;
 import com.bettertyping.core.SpellChecker;
-import com.bettertyping.core.WordList;
 import com.bettertyping.version.Screens;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.api.ClientModInitializer;
@@ -22,8 +20,7 @@ import org.slf4j.LoggerFactory;
 public class BetterTyping implements ClientModInitializer {
 	public static final String MOD_ID = "bettertyping";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	private static final String DICTIONARY_PATH = "/assets/bettertyping/dictionaries/%s.txt";
-	private static final String CHAT_WORDS_PATH = "/assets/bettertyping/dictionaries/%s.chat.txt";
+	private static final String DICTIONARIES = "/assets/bettertyping/dictionaries/";
 
 	private static Settings settings = new Settings();
 	private static Path settingsFile;
@@ -41,16 +38,16 @@ public class BetterTyping implements ClientModInitializer {
 			LOGGER.error("Couldn't read settings, using defaults", e);
 		}
 
-		PersonalDictionary personal = new PersonalDictionary(configDir.resolve("personal_dictionary.txt"));
-		try {
-			personal.load();
-		} catch (IOException e) {
-			LOGGER.error("Couldn't read the personal dictionary", e);
-		}
-		checker = new SpellChecker(personal);
+		checker = new SpellChecker(configDir.resolve("personal_dictionary.txt"), e -> LOGGER.error(e.getMessage(), e.getCause()));
 		CompletableFuture.runAsync(BetterTyping::loadLanguage);
 
-		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> ScreenHooks.attach(screen));
+		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
+			// Item and mob names exist (and are translated) once a world is loaded; the language can only change between screens.
+			if (client.level != null) {
+				GameWords.refreshIfNeeded(checker);
+			}
+			ScreenHooks.attach(screen);
+		});
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
 			dispatcher.register(LiteralArgumentBuilder.<FabricClientCommandSource>literal("bettertyping").executes(context -> {
 				openSettings = true;
@@ -74,22 +71,14 @@ public class BetterTyping implements ClientModInitializer {
 
 	/** Loads the first configured language that ships with the mod. Nothing is flagged until this finishes. */
 	private static void loadLanguage() {
-		for (String language : settings.languages) {
-			try (InputStream in = BetterTyping.class.getResourceAsStream(DICTIONARY_PATH.formatted(language));
-				InputStream chat = BetterTyping.class.getResourceAsStream(CHAT_WORDS_PATH.formatted(language))) {
-				if (in == null) {
-					LOGGER.warn("No bundled dictionary for language {}", language);
-					continue;
-				}
-				long start = System.nanoTime();
-				WordList words = WordList.language(in, chat != null ? chat : InputStream.nullInputStream());
-				checker.setLanguage(words);
-				LOGGER.info("Loaded {} dictionary: {} words in {} ms", language, words.size(), (System.nanoTime() - start) / 1_000_000);
-				return;
-			} catch (IOException e) {
-				LOGGER.error("Couldn't load dictionary {}", language, e);
-			}
-		}
+		long start = System.nanoTime();
+		LanguageDictionary.loadFirst(settings.languages, name -> BetterTyping.class.getResourceAsStream(DICTIONARIES + name),
+				(language, e) -> LOGGER.warn("Couldn't load the {} dictionary: {}", language, e.toString()))
+			.ifPresent(dictionary -> {
+				checker.setLanguage(dictionary.words());
+				LOGGER.info("Loaded {} dictionary: {} words in {} ms", dictionary.language(), dictionary.words().size(),
+					(System.nanoTime() - start) / 1_000_000);
+			});
 	}
 
 	public static Settings settings() {

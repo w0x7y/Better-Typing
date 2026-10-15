@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +60,16 @@ class TypingSessionTest {
 			this.state = state;
 		}
 
+		@Override
+		public List<Line> lines() {
+			return List.of(new Line(0, text().length(), 0, 0, 1));
+		}
+
+		@Override
+		public int textWidth(String text) {
+			return text.length() * 6;
+		}
+
 		String text() {
 			return state.text();
 		}
@@ -71,10 +80,10 @@ class TypingSessionTest {
 	}
 
 	@BeforeEach
-	void setUp() throws IOException {
-		PersonalDictionary personal = new PersonalDictionary(tmp.resolve("personal.txt"));
-		personal.load();
-		checker = new SpellChecker(personal);
+	void setUp() {
+		checker = new SpellChecker(tmp.resolve("personal.txt"), e -> {
+			throw new AssertionError(e);
+		});
 		checker.setLanguage(WordList.caseSensitive(Map.of(
 			"the", 0, "there", 1, "then", 2, "them", 3, "hello", 4, "help", 5, "world", 6, "word", 7)));
 		settings = new Settings();
@@ -218,8 +227,8 @@ class TypingSessionTest {
 		Field line2 = new Field("line2", true);
 		line1.apply(TextState.of("wrold", 5));
 		type(line2, "he");
-		TypingSession.Overlay<Field> overlay = session.overlay(List.of(line1, line2), line2, time);
-		assertEquals(List.of(line1), overlay.misspellings().stream().map(TypingSession.Misspelling::field).toList());
+		TypingSession.Overlay overlay = session.overlay(List.of(line1, line2), line2, time);
+		assertEquals(List.<TypingField>of(line1), overlay.misspellings().stream().map(TypingSession.Misspelling::field).toList());
 		assertEquals(Popup.Mode.AUTOCOMPLETE, overlay.popup().mode());
 	}
 
@@ -282,17 +291,32 @@ class TypingSessionTest {
 		assertNull(session.overlay(List.of(line1, line2), line1, time).popup());
 	}
 
-	@Test
-	void undoSettlesOnWhatTheFieldAccepted() {
-		Field narrow = new Field("sign", true) {
+	/** Like a sign line: refuses text longer than 5 characters and keeps what it had. */
+	private static Field narrowField() {
+		return new Field("sign", true) {
 			@Override
 			public void apply(TextState state) {
-				// Like a sign line: refuses text that doesn't fit and keeps what it had.
 				if (state.text().length() <= 5) {
 					super.apply(state);
 				}
 			}
 		};
+	}
+
+	@Test
+	void completionThatDoesNotFitLetsSpaceTypeNormally() {
+		Field narrow = narrowField();
+		type(narrow, "he");
+		press(narrow, TAB);
+		type(narrow, " ");
+		assertEquals("he ", narrow.text(), "\"hello \" is too long, so Space types a space");
+		assertEquals(3, narrow.state.cursor());
+		assertNull(popup(narrow));
+	}
+
+	@Test
+	void undoSettlesOnWhatTheFieldAccepted() {
+		Field narrow = narrowField();
 		type(narrow, "abcde");
 		narrow.state = TextState.of("abcdefgh", 8);
 		session.overlay(List.of(narrow), narrow, time += 2_000);

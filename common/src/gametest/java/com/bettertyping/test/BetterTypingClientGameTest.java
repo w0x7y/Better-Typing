@@ -2,6 +2,7 @@ package com.bettertyping.test;
 
 import com.bettertyping.BetterTyping;
 import com.bettertyping.ScreenHooks;
+import com.bettertyping.core.KeyCombo;
 import com.bettertyping.mixin.BookEditScreenAccessor;
 import com.bettertyping.mixin.ChatScreenAccessor;
 import com.bettertyping.mixin.MultiLineEditBoxAccessor;
@@ -14,6 +15,7 @@ import dev.isxander.yacl3.gui.YACLScreen;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -72,6 +74,11 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		ctrlShift(context, "z");
 		expect("teh world the ", chatText(context), "Ctrl+Shift+Z redoes too");
 
+		// Resizing the window rebuilds the chat box.
+		context.runOnClient(client -> Screens.current(client).resize(Screens.current(client).width, Screens.current(client).height));
+		ctrl(context, "z");
+		expect("teh wrold the ", chatText(context), "Undo history survives a resize");
+
 		// The test word has no near matches, so its popup only holds "Add to dictionary".
 		context.runOnClient(client -> chatInput(Screens.current(client)).setValue(TEST_WORD));
 		context.runOnClient(client -> chatInput(Screens.current(client)).moveCursorTo(2, false));
@@ -80,11 +87,7 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		type(context, " ");
 		check(BetterTyping.checker().isCorrect(TEST_WORD), "Add to dictionary makes the word correct");
 		expect(TEST_WORD, chatText(context), "Adding a word leaves the text alone");
-		try {
-			BetterTyping.checker().removePersonalWord(TEST_WORD);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
+		removePersonalWord(TEST_WORD);
 
 		context.runOnClient(client -> chatInput(Screens.current(client)).setValue(""));
 		type(context, "/gamemode cr");
@@ -158,7 +161,10 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 
 	@SuppressWarnings("unchecked")
 	private static void settings(ClientGameTestContext context) {
-		addPersonalWord(TEST_WORD);
+		for (String key : KeyCombo.SHORTCUT_KEYS) {
+			check(isKeyName(key), "Shortcut key " + key + " is a Minecraft key name");
+		}
+		BetterTyping.checker().addPersonalWord(TEST_WORD);
 		context.getInput().pressKey(options -> options.keyChat);
 		context.waitForScreen(ChatScreen.class);
 		type(context, "/bettertyping");
@@ -193,11 +199,18 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		close(context);
 	}
 
-	private static void addPersonalWord(String word) {
+	private static void removePersonalWord(String word) {
+		List<String> words = new ArrayList<>(BetterTyping.checker().personalWords());
+		words.remove(word);
+		BetterTyping.checker().setPersonalWords(words);
+	}
+
+	/** Whether {@code key} is how the mod names a Minecraft key: its name without "key.keyboard.". */
+	private static boolean isKeyName(String key) {
 		try {
-			BetterTyping.checker().addPersonalWord(word);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+			return InputConstants.getKey("key.keyboard." + key).getName().equals("key.keyboard." + key);
+		} catch (IllegalArgumentException e) {
+			return false;
 		}
 	}
 

@@ -13,13 +13,8 @@ import dev.isxander.yacl3.api.YetAnotherConfigLib;
 import dev.isxander.yacl3.api.controller.DropdownStringControllerBuilder;
 import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -29,8 +24,6 @@ import net.minecraft.network.chat.Component;
 /** The settings screen, built with YetAnotherConfigLib. Opened from Mod Menu or with /bettertyping. */
 public final class SettingsScreen {
 	private static final String KEY = "bettertyping.settings.";
-	/** Keys a shortcut can use. Tab, Space, Enter and Escape are left out: the mod and the game already use them. */
-	private static final List<String> SHORTCUT_KEYS = shortcutKeys();
 
 	private SettingsScreen() {
 	}
@@ -70,7 +63,7 @@ public final class SettingsScreen {
 
 	/** One shortcut as Ctrl, Shift and Alt tick boxes plus a key, so it can't be set to something invalid. */
 	private static OptionGroup shortcut(String name, KeyCombo fallback, Supplier<KeyCombo> get, Consumer<KeyCombo> set) {
-		List<String> keys = new ArrayList<>(SHORTCUT_KEYS);
+		List<String> keys = new ArrayList<>(KeyCombo.SHORTCUT_KEYS);
 		if (!keys.contains(get.get().key())) {
 			// Set by hand in settings.properties; keep it selectable.
 			keys.add(get.get().key());
@@ -100,12 +93,12 @@ public final class SettingsScreen {
 			.build();
 	}
 
-	/** The personal dictionary as an editable list. Saving adds and removes words to match it. */
+	/** The personal dictionary as an editable list. Saving replaces its words with the list. */
 	private static ListOption<String> personalDictionary(SpellChecker checker) {
 		return ListOption.<String>createBuilder()
 			.name(text("personal_dictionary"))
 			.description(OptionDescription.of(text("personal_dictionary.description")))
-			.binding(List.of(), checker::personalWords, words -> savePersonalWords(checker, words))
+			.binding(List.of(), checker::personalWords, checker::setPersonalWords)
 			.controller(StringControllerBuilder::create)
 			.initial("")
 			.insertEntriesAtEnd(true)
@@ -113,45 +106,7 @@ public final class SettingsScreen {
 			.build();
 	}
 
-	private static void savePersonalWords(SpellChecker checker, List<String> entries) {
-		Set<String> wanted = new LinkedHashSet<>();
-		for (String entry : entries) {
-			for (String word : entry.strip().split("\\s+")) {
-				if (!word.isEmpty()) {
-					wanted.add(word.toLowerCase(Locale.ROOT));
-				}
-			}
-		}
-		try {
-			for (String word : checker.personalWords()) {
-				if (!wanted.contains(word)) {
-					checker.removePersonalWord(word);
-				}
-			}
-			for (String word : wanted) {
-				checker.addPersonalWord(word);
-			}
-		} catch (IOException e) {
-			BetterTyping.LOGGER.error("Couldn't save the personal dictionary", e);
-		}
-	}
-
 	private static Component text(String name) {
 		return Component.translatable(KEY + name);
-	}
-
-	private static List<String> shortcutKeys() {
-		List<String> keys = new ArrayList<>();
-		for (char c = 'a'; c <= 'z'; c++) {
-			keys.add(String.valueOf(c));
-		}
-		for (char c = '0'; c <= '9'; c++) {
-			keys.add(String.valueOf(c));
-		}
-		for (int i = 1; i <= 12; i++) {
-			keys.add("f" + i);
-		}
-		keys.addAll(Arrays.asList("backspace", "delete", "insert", "home", "end", "page.up", "page.down", "left", "right", "up", "down"));
-		return List.copyOf(keys);
 	}
 }
