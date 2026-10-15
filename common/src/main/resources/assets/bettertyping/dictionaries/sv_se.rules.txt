@@ -1,0 +1,6 @@
+# How Swedish joins words into one: fot + boll, arbet(e) + s + plats, flick(a) + skola, kyrk(a) + o + gård.
+# The 50 most common words (och, att) aren't parts, so two words typed without a space stay misspelled.
+compound.min_part = 3
+compound.links = s o u e
+compound.stems = a e
+compound.skip_most_common = 50

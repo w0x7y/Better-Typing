@@ -1,0 +1,5 @@
+# How Dutch joins words into one: speel + plaats, schaap + s + kooi, boek + en + kast.
+# The 50 most common words (de, het) aren't parts, so two words typed without a space stay misspelled.
+compound.min_part = 3
+compound.links = s e en
+compound.skip_most_common = 50

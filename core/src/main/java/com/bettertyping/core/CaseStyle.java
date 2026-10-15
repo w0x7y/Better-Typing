@@ -2,7 +2,7 @@ package com.bettertyping.core;
 
 import java.util.Locale;
 
-/** How a typed word is capitalized, so suggestions can match it. */
+/** How a typed word is capitalized, so suggestions can match it. Letters without case (Hebrew, Arabic) don't count. */
 public enum CaseStyle {
 	LOWER,
 	CAPITALIZED,
@@ -15,7 +15,7 @@ public enum CaseStyle {
 		boolean restLower = true;
 		for (int i = 0; i < word.length(); i++) {
 			char c = word.charAt(i);
-			if (!Character.isLetter(c)) {
+			if (!isCased(c)) {
 				continue;
 			}
 			if (Character.isLowerCase(c)) {
@@ -28,7 +28,7 @@ public enum CaseStyle {
 		if (!anyLetter) {
 			return LOWER;
 		}
-		if (allUpper && word.codePoints().filter(Character::isLetter).count() > 1) {
+		if (allUpper && word.chars().filter(c -> isCased((char) c)).count() > 1) {
 			return UPPER;
 		}
 		boolean firstUpper = Character.isUpperCase(firstLetter(word));
@@ -56,10 +56,14 @@ public enum CaseStyle {
 
 	private static char firstLetter(String word) {
 		for (int i = 0; i < word.length(); i++) {
-			if (Character.isLetter(word.charAt(i))) {
+			if (isCased(word.charAt(i))) {
 				return word.charAt(i);
 			}
 		}
 		return ' ';
+	}
+
+	private static boolean isCased(char c) {
+		return Character.isUpperCase(c) || Character.isLowerCase(c) || Character.isTitleCase(c);
 	}
 }

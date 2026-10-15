@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +15,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
@@ -25,21 +27,58 @@ import java.util.function.BiConsumer;
  * (game names, the personal dictionary) accept any capitalization.
  *
  * <p>An entry ending in an apostrophe is an elision ("l'" in French, "dell'" in Italian): it isn't a
- * word by itself, but a word of the list with it in front counts as correct ("l'homme").
+ * word by itself, but a word of the list with it in front counts as correct ("l'homme"). A language
+ * with {@link Compounds} also accepts words joined into one (German "Spielplatz").
  */
 public final class WordList {
-	public static final WordList EMPTY = new WordList(Map.of(), false);
+	public static final WordList EMPTY = new WordList(Map.of(), false, Compounds.NONE);
 	static final int CHAT_SPACING = 3;
+
+	/**
+	 * How a language joins words into one, read from its rules file: {@code compound.min_part} (the
+	 * shortest part; compounds are off without it), {@code compound.links} (letters allowed between parts,
+	 * as in Arbeit-s-zimmer), {@code compound.stems} (endings a part may drop, as in Wasch(en)maschine)
+	 * and {@code compound.skip_most_common} (how many of the most common words, like "der" and "und",
+	 * can't be parts, so two words typed without a space stay misspelled). Lists are space-separated.
+	 */
+	public record Compounds(int minPart, List<String> links, List<String> stemEndings, int skipMostCommon) {
+		public static final Compounds NONE = new Compounds(0, List.of(), List.of(), 0);
+
+		public static Compounds read(InputStream in) throws IOException {
+			Properties rules = new Properties();
+			try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+				rules.load(reader);
+			}
+			try {
+				return new Compounds(Integer.parseInt(rules.getProperty("compound.min_part", "0").strip()),
+					list(rules, "compound.links"), list(rules, "compound.stems"),
+					Integer.parseInt(rules.getProperty("compound.skip_most_common", "0").strip()));
+			} catch (NumberFormatException e) {
+				throw new IOException("Bad number in compound rules", e);
+			}
+		}
+
+		private static List<String> list(Properties rules, String key) {
+			String value = rules.getProperty(key, "").strip();
+			return value.isEmpty() ? List.of() : List.of(value.toLowerCase(Locale.ROOT).split("\\s+"));
+		}
+
+		boolean enabled() {
+			return minPart > 0;
+		}
+	}
 
 	private final boolean caseSensitive;
 	private final Map<String, Integer> exact;
 	private final Map<String, Integer> lowerRank = new HashMap<>();
 	private final Map<String, String> lowerDisplay = new HashMap<>();
 	private final Set<String> elisions = new HashSet<>();
+	private final Compounds compounds;
 	private final String[] sortedLower;
 	private final List<List<String>> byLength = new ArrayList<>();
 
-	private WordList(Map<String, Integer> entries, boolean caseSensitive) {
+	private WordList(Map<String, Integer> entries, boolean caseSensitive, Compounds compounds) {
+		this.compounds = compounds;
 		Map<String, Integer> ranks = new HashMap<>();
 		for (Map.Entry<String, Integer> entry : entries.entrySet()) {
 			String word = entry.getKey();
@@ -77,7 +116,7 @@ public final class WordList {
 
 	/** A case-sensitive list where each line is a word and the line number is its rank. */
 	public static WordList fromRankedLines(InputStream in) throws IOException {
-		return new WordList(readRanked(in), true);
+		return new WordList(readRanked(in), true, Compounds.NONE);
 	}
 
 	/**
@@ -87,6 +126,11 @@ public final class WordList {
 	 * the dictionary lacks ("gg", "afk") count as correct. Blank lines and {@code #} comments are skipped.
 	 */
 	public static WordList language(InputStream dictionary, InputStream chatWords) throws IOException {
+		return language(dictionary, chatWords, Compounds.NONE);
+	}
+
+	/** {@link #language(InputStream, InputStream)} for a language that joins words into compounds. */
+	public static WordList language(InputStream dictionary, InputStream chatWords, Compounds compounds) throws IOException {
 		Map<String, Integer> ranks = readRanked(dictionary);
 		int position = 0;
 		for (String word : readLines(chatWords)) {
@@ -94,7 +138,7 @@ public final class WordList {
 				ranks.merge(word, position++ * CHAT_SPACING, Math::min);
 			}
 		}
-		return new WordList(ranks, true);
+		return new WordList(ranks, true, compounds);
 	}
 
 	private static Map<String, Integer> readRanked(InputStream in) throws IOException {
@@ -121,7 +165,7 @@ public final class WordList {
 	}
 
 	public static WordList caseSensitive(Map<String, Integer> ranks) {
-		return new WordList(ranks, true);
+		return new WordList(ranks, true, Compounds.NONE);
 	}
 
 	/** A case-insensitive list where every word gets the same rank. */
@@ -130,7 +174,7 @@ public final class WordList {
 		for (String word : words) {
 			ranks.putIfAbsent(Tokenizer.normalize(word).toLowerCase(Locale.ROOT), rank);
 		}
-		return new WordList(ranks, false);
+		return new WordList(ranks, false, Compounds.NONE);
 	}
 
 	public int size() {
@@ -143,7 +187,60 @@ public final class WordList {
 			return true;
 		}
 		int elided = elisionEnd(word);
-		return elided > 0 && contains(word.substring(elided));
+		if (elided > 0 && contains(word.substring(elided))) {
+			return true;
+		}
+		return compounds.enabled() && isCompound(word);
+	}
+
+	/**
+	 * Whether the word is two or more of the list's words joined, with the allowed links between them.
+	 * The last part takes the whole word's capitalization: German "Spielplatz" ends in the noun "Platz",
+	 * so "spielplatz" stays misspelled.
+	 */
+	private boolean isCompound(String word) {
+		CaseStyle style = CaseStyle.of(word);
+		String lower = word.toLowerCase(Locale.ROOT);
+		int length = lower.length();
+		if (style == CaseStyle.MIXED || length < 2 * compounds.minPart()) {
+			return false;
+		}
+		boolean[] partStarts = new boolean[length];
+		partStarts[0] = true;
+		for (int start = 0; start < length; start++) {
+			if (!partStarts[start]) {
+				continue;
+			}
+			for (int end = start + compounds.minPart(); end <= length; end++) {
+				String part = lower.substring(start, end);
+				if (end == length) {
+					if (start > 0 && isPart(part) && containsWord(style.apply(part))) {
+						return true;
+					}
+				} else if (isPart(part) || compounds.stemEndings().stream().anyMatch(ending -> isPart(part + ending))) {
+					markNextParts(lower, end, partStarts);
+				}
+			}
+		}
+		return false;
+	}
+
+	/** After a part ending at {@code end}, the next one can start right there or after a link. */
+	private void markNextParts(String lower, int end, boolean[] partStarts) {
+		if (end < partStarts.length) {
+			partStarts[end] = true;
+		}
+		for (String link : compounds.links()) {
+			int next = end + link.length();
+			if (next < partStarts.length && lower.startsWith(link, end)) {
+				partStarts[next] = true;
+			}
+		}
+	}
+
+	private boolean isPart(String lower) {
+		Integer rank = lowerRank.get(lower);
+		return rank != null && rank >= compounds.skipMostCommon();
 	}
 
 	private boolean containsWord(String word) {

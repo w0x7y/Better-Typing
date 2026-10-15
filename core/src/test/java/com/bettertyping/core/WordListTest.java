@@ -56,6 +56,47 @@ class WordListTest {
 		assertEquals(3, french.size(), "elisions aren't words");
 	}
 
+	/** German-like: the 2 most common words can't be parts, "s" links parts, and "en" can be dropped. */
+	private static WordList german() throws IOException {
+		WordList.Compounds rules = WordList.Compounds.read(lines("compound.min_part=3", "compound.links=s es",
+			"compound.stems=en e", "compound.skip_most_common=2"));
+		return WordList.language(lines("der", "und", "Haus", "Tür", "spielen", "Platz", "Arbeit", "Zimmer", "hell", "blau", "Schule", "Hof"),
+			InputStream.nullInputStream(), rules);
+	}
+
+	@Test
+	void joinedWordsCountWhenTheLanguageMakesCompounds() throws IOException {
+		WordList german = german();
+		assertTrue(german.contains("Haustür"));
+		assertTrue(german.contains("Spielplatz"), "spiel(en) + Platz");
+		assertTrue(german.contains("Arbeitszimmer"), "Arbeit + s + Zimmer");
+		assertTrue(german.contains("Schulhof"), "Schul(e) + Hof");
+		assertTrue(german.contains("Hausarbeitszimmer"), "three parts");
+		assertTrue(german.contains("hellblau"), "an adjective compound stays lowercase");
+		assertTrue(german.contains("HAUSTÜR"));
+	}
+
+	@Test
+	void compoundsFollowTheirLastPartAndSkipTheMostCommonWords() throws IOException {
+		WordList german = german();
+		assertFalse(german.contains("haustür"), "Tür is a noun, so the compound is capitalized");
+		assertFalse(german.contains("Hausder"), "der is too common to be a part");
+		assertFalse(german.contains("Undhaus"));
+		assertFalse(german.contains("Hausxtür"), "x isn't a link");
+		assertFalse(german.contains("Hau"), "one part isn't a compound");
+		assertFalse(WordList.language(lines("Haus", "Tür"), InputStream.nullInputStream()).contains("Haustür"),
+			"languages without compound rules don't join words");
+	}
+
+	@Test
+	void lettersWithoutCaseFollowTheExactWord() throws IOException {
+		WordList hebrew = WordList.language(lines("שלום", "תודה"), InputStream.nullInputStream());
+		assertTrue(hebrew.contains("שלום"));
+		assertTrue(hebrew.contains("שָׁלוֹם"), "vowel marks don't matter");
+		assertFalse(hebrew.contains("שלוםם"));
+		assertEquals(CaseStyle.LOWER, CaseStyle.of("שלום"));
+	}
+
 	private static InputStream lines(String... lines) {
 		return new ByteArrayInputStream(String.join("\n", lines).getBytes(StandardCharsets.UTF_8));
 	}

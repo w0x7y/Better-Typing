@@ -1,0 +1,40 @@
+# Words common in Arabic chat: greetings, thanks, yes and no, laughter and short forms. Ones the
+# dictionary lacks count as correct, and they rank like en_us.chat.txt's. The shared gaming slang in
+# chat.txt comes after them. Blank lines and lines starting with # are skipped.
+
+مرحبا
+هلا
+اهلا
+سلام
+السلام
+عليكم
+شكرا
+مشكور
+نعم
+لا
+اوكي
+تمام
+يلا
+ههه
+هههه
+ههههه
+هههههه
+والله
+حبيبي
+اخوي
+ياخي
+اسف
+انتظر
+تعال
+ابي
+ابغى
+شلون
+كيفك
+وش
+ايش
+شو
+ليش
+طيب
+زين
+خلاص
+ماشي

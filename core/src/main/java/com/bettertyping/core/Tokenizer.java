@@ -45,7 +45,7 @@ public final class Tokenizer {
 
 	/** The word that ends exactly at {@code pos}, with no word character right after it, or null. */
 	public static WordSpan wordEndingAt(String text, int pos) {
-		if (pos < text.length() && isWordChar(text.charAt(pos))) {
+		if (pos < text.length() && isWordChar(text, pos)) {
 			return null;
 		}
 		for (WordSpan word : words(text)) {
@@ -56,9 +56,36 @@ public final class Tokenizer {
 		return null;
 	}
 
-	/** Curly apostrophes count as straight ones for dictionary lookups. */
+	/**
+	 * A word as dictionaries spell it: curly apostrophes and the Hebrew geresh count as straight
+	 * apostrophes, the gershayim as a double quote (צה״ל), and Arabic and Hebrew vowel marks and the
+	 * Arabic tatweel are left out.
+	 */
 	public static String normalize(String word) {
-		return word.replace('’', '\'');
+		StringBuilder normal = null;
+		for (int i = 0; i < word.length(); i++) {
+			char c = word.charAt(i);
+			char replacement = switch (c) {
+				case '’', '\u05F3' -> '\'';
+				case '\u05F4' -> '"';
+				default -> c;
+			};
+			boolean dropped = isOptionalMark(c);
+			if (normal == null && (dropped || replacement != c)) {
+				normal = new StringBuilder(word.length()).append(word, 0, i);
+			}
+			if (normal != null && !dropped) {
+				normal.append(replacement);
+			}
+		}
+		return normal == null ? word : normal.toString();
+	}
+
+	/** Arabic and Hebrew vowel and cantillation marks, and the Arabic tatweel: written or not, it's the same word. */
+	private static boolean isOptionalMark(char c) {
+		return (c >= '\u0591' && c <= '\u05C7' && Character.getType(c) == Character.NON_SPACING_MARK)
+			|| (c >= '\u0610' && c <= '\u061A') || (c >= '\u064B' && c <= '\u065F') || c == '\u0670' || c == '\u0640'
+			|| (c >= '\u06D6' && c <= '\u06ED' && Character.getType(c) == Character.NON_SPACING_MARK);
 	}
 
 	static boolean isLinkLike(String chunk) {
@@ -69,13 +96,13 @@ public final class Tokenizer {
 	private static void collectRuns(String text, int from, int to, List<WordSpan> out) {
 		int i = from;
 		while (i < to) {
-			if (!isRunChar(text.charAt(i))) {
+			if (!isRunChar(text, i)) {
 				i++;
 				continue;
 			}
 			int runEnd = i;
 			boolean checkable = true;
-			while (runEnd < to && isRunChar(text.charAt(runEnd))) {
+			while (runEnd < to && isRunChar(text, runEnd)) {
 				char c = text.charAt(runEnd);
 				if (Character.isDigit(c) || c == '_') {
 					checkable = false;
@@ -97,15 +124,28 @@ public final class Tokenizer {
 		}
 	}
 
-	private static boolean isRunChar(char c) {
-		return Character.isLetterOrDigit(c) || c == '_' || isApostrophe(c);
+	private static boolean isRunChar(String text, int i) {
+		char c = text.charAt(i);
+		return Character.isLetterOrDigit(c) || c == '_' || isWordChar(text, i);
 	}
 
-	private static boolean isWordChar(char c) {
-		return Character.isLetter(c) || isApostrophe(c);
+	/** Letters, apostrophes and marks on letters, and a quote inside a Hebrew acronym (צה"ל). */
+	private static boolean isWordChar(String text, int i) {
+		char c = text.charAt(i);
+		return Character.isLetter(c) || isApostrophe(c) || isMark(c)
+			|| ((c == '"' || c == '\u05F4') && isHebrewLetter(text, i - 1) && isHebrewLetter(text, i + 1));
 	}
 
 	private static boolean isApostrophe(char c) {
-		return c == '\'' || c == '’';
+		return c == '\'' || c == '’' || c == '\u05F3';
+	}
+
+	private static boolean isMark(char c) {
+		int type = Character.getType(c);
+		return type == Character.NON_SPACING_MARK || type == Character.COMBINING_SPACING_MARK || c == '\u0640';
+	}
+
+	private static boolean isHebrewLetter(String text, int i) {
+		return i >= 0 && i < text.length() && text.charAt(i) >= '\u05D0' && text.charAt(i) <= '\u05EA';
 	}
 }

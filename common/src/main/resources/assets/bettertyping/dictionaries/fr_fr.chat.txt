@@ -1,0 +1,42 @@
+# Words common in French chat: greetings, thanks, yes and no, laughter and short forms. Ones the
+# dictionary lacks count as correct, and they rank like en_us.chat.txt's. The shared gaming slang in
+# chat.txt comes after them. Blank lines and lines starting with # are skipped.
+
+salut
+bonjour
+bonsoir
+coucou
+merci
+stp
+svp
+oui
+ouais
+non
+ok
+mdr
+ptdr
+lol
+jsp
+jpp
+tkt
+bcp
+slt
+cc
+dsl
+pk
+pq
+ptn
+wsh
+frérot
+gg
+bg
+oklm
+attends
+viens
+allez
+wesh
+grave
+trop
+chelou
+ouf
+genre

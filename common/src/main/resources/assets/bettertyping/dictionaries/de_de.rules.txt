@@ -1,0 +1,6 @@
+# How German joins words into one: Haus + Tür, Arbeit + s + Zimmer, Wasch(en) + Maschine, Schul(e) + Hof.
+# The 50 most common words (der, und) aren't parts, so two words typed without a space stay misspelled.
+compound.min_part = 3
+compound.links = s es n en er e ens
+compound.stems = en n e
+compound.skip_most_common = 50

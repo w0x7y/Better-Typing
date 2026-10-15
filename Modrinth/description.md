@@ -44,7 +44,7 @@ On macOS, Ctrl is Cmd, like vanilla's copy and paste.
 ![Picking a language](gallery:Languages)
 
 English with American or British spelling comes with the mod. German, Spanish, French, Italian, Dutch,
-Brazilian Portuguese and Swedish are a download each, about 1 MB.
+Portuguese (Brazil and Portugal), Swedish, Russian, Hebrew and Arabic are a download each, about 1 MB.
 
 Pick one in the settings and press Save. Only then does the mod connect to the internet: it downloads the
 language from the mod's [GitHub releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.0.0)
@@ -53,8 +53,9 @@ in the mods folder like any mod, for a modpack or to play offline.
 
 The default, Game language, uses the game's language when it's installed, and American English otherwise.
 
-Item and mob names count as correct in the game's language, modded ones too, and so do chat words like
-gg, afk and lol, in every language. Player names don't.
+Every language knows its chat words (hallo, mdr, kkk, סבבה, يلا), plus gaming slang like gg, afk and xD.
+German, Dutch and Swedish also accept compounds made of known words, like Diamantschwert. Item and mob
+names count as correct in the game's language, modded ones too. Player names don't.
 
 ## Settings
 
@@ -69,8 +70,8 @@ Open them with `/bettertyping`, or the config button in Mod Menu.
 
 ## Coming later
 
-- Russian, Polish, Turkish, Czech and Ukrainian. They have millions of word forms, so they need a more
-  compact word list first.
+- Polish, Turkish, Czech and Ukrainian. They have millions of word forms, so they need a more compact word
+  list first.
 
 ## Credits
 
@@ -78,7 +79,8 @@ The English word lists are built from the [English Speller Database](https://git
 (SCOWL) by Kevin Atkinson and sorted with [gwordlist](https://github.com/hackerb9/gwordlist) by hackerb9,
 compiled from the Google Books Ngram dataset ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)).
 
-The other languages are separate downloads under the GNU GPL version 3, built from the
+The other languages are separate downloads under the GNU GPL version 3 (Hebrew: the GNU AGPL version 3, as
+its words come from Hspell), built from the
 [LibreOffice dictionaries](https://github.com/LibreOffice/dictionaries) and ordered with
 [wordfreq](https://github.com/rspeer/wordfreq) by Robyn Speer. Each one's page and NOTICE.txt credit its
 sources.

@@ -27,6 +27,22 @@ class TokenizerTest {
 	}
 
 	@Test
+	void hebrewAcronymsAndVowelMarksStayInOneWord() {
+		// A quote inside a Hebrew word is part of it; quotes around a word aren't, and a trailing geresh is trimmed like an apostrophe.
+		assertEquals(List.of("צה\"ל", "צה״ל", "שלום", "וכו"), words("צה\"ל צה״ל \"שלום\" וכו׳"));
+		assertEquals(List.of("مُحَمَّد", "رسول", "שָׁלוֹם"), words("مُحَمَّد رسول، שָׁלוֹם"));
+	}
+
+	@Test
+	void normalizedWordsDropVowelMarksAndUnifyQuotes() {
+		assertEquals("محمد", Tokenizer.normalize("مُحَمَّد"));
+		assertEquals("שלום", Tokenizer.normalize("שָׁלוֹם"));
+		assertEquals("צה\"ל", Tokenizer.normalize("צה״ל"));
+		assertEquals("ג'וק", Tokenizer.normalize("ג׳וק"));
+		assertEquals("don't", Tokenizer.normalize("don’t"));
+	}
+
+	@Test
 	void reportsPositions() {
 		WordSpan word = Tokenizer.words("hi there").get(1);
 		assertEquals(new WordSpan(3, 8, "there"), word);

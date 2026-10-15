@@ -1,7 +1,9 @@
 package com.bettertyping.core;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
 import java.util.Optional;
@@ -11,8 +13,9 @@ import java.util.regex.Pattern;
 /**
  * The language dictionary: the word list of the first of the player's languages that has one, with that
  * language's chat words moved up (see {@link WordList#language}). A language is the file
- * {@code <language>.txt} plus its chat words: {@code <language>.chat.txt}, or for a language without
- * its own, the shared gaming slang in {@code chat.txt} (gg, afk).
+ * {@code <language>.txt}, its chat words in {@code <language>.chat.txt} if there are any, followed by the
+ * gaming slang every language shares in {@code chat.txt} (gg, afk), and how it joins words into
+ * compounds in {@code <language>.rules.txt} if it does (see {@link WordList.Compounds}).
  *
  * @param language its code, e.g. {@code en_us}
  */
@@ -56,12 +59,29 @@ public record LanguageDictionary(String language, WordList words) {
 			if (words == null) {
 				throw new NoSuchFileException(name);
 			}
-			return WordList.language(words, chat != null ? chat : InputStream.nullInputStream());
+			return WordList.language(words, chat, compounds(language, source));
 		}
 	}
 
+	/** The language's own chat words, then the shared ones. */
 	private static InputStream chatWords(String language, Source source) throws IOException {
-		InputStream own = source.open(language + ".chat.txt");
-		return own != null ? own : source.open("chat.txt");
+		InputStream own = orEmpty(source.open(language + ".chat.txt"));
+		try {
+			InputStream shared = orEmpty(source.open("chat.txt"));
+			return new SequenceInputStream(own, new SequenceInputStream(new ByteArrayInputStream(new byte[] {'\n'}), shared));
+		} catch (IOException e) {
+			own.close();
+			throw e;
+		}
+	}
+
+	private static WordList.Compounds compounds(String language, Source source) throws IOException {
+		try (InputStream rules = source.open(language + ".rules.txt")) {
+			return rules == null ? WordList.Compounds.NONE : WordList.Compounds.read(rules);
+		}
+	}
+
+	private static InputStream orEmpty(InputStream in) {
+		return in != null ? in : InputStream.nullInputStream();
 	}
 }

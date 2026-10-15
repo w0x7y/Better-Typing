@@ -1,0 +1,30 @@
+# Words common in European Portuguese chat: greetings, thanks, yes and no, laughter and short forms. Ones the
+# dictionary lacks count as correct, and they rank like en_us.chat.txt's. The shared gaming slang in
+# chat.txt comes after them. Blank lines and lines starting with # are skipped.
+
+olá
+boas
+xau
+obrigado
+obrigada
+obg
+sim
+não
+ok
+fixe
+pá
+bué
+ya
+haha
+lol
+tb
+pq
+gg
+mano
+desculpa
+espera
+anda
+vamos
+pronto
+tá
+fogo

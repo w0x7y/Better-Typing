@@ -1,6 +1,6 @@
-# Gaming slang and Minecraft words used in chat whatever the language, most common first. Languages
-# without chat words of their own (en_us.chat.txt) get these, so gg and afk count as correct in any
-# language. Blank lines and lines starting with # are skipped.
+# Gaming slang and Minecraft words used in chat whatever the language, most common first. Every
+# language gets these after its own chat words, so gg and afk count as correct in any language. Blank
+# lines and lines starting with # are skipped.
 
 # talking
 ok
@@ -35,6 +35,7 @@ wb
 gtg
 ttyl
 xd
+xD
 oof
 bruh
 

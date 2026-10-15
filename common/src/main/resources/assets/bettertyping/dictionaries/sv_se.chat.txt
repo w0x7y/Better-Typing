@@ -1,0 +1,35 @@
+# Words common in Swedish chat: greetings, thanks, yes and no, laughter and short forms. Ones the
+# dictionary lacks count as correct, and they rank like en_us.chat.txt's. The shared gaming slang in
+# chat.txt comes after them. Blank lines and lines starting with # are skipped.
+
+hej
+hejsan
+tja
+tjena
+tjo
+hejdå
+tack
+tackar
+ja
+nej
+japp
+nä
+okej
+ok
+haha
+lol
+asså
+typ
+lr
+iaf
+iofs
+gg
+kul
+nice
+sorry
+förlåt
+vänta
+kom
+va
+jaa
+nää

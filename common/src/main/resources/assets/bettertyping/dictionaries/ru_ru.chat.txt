@@ -1,0 +1,38 @@
+# Words common in Russian chat: greetings, thanks, yes and no, laughter and short forms. Ones the
+# dictionary lacks count as correct, and they rank like en_us.chat.txt's. The shared gaming slang in
+# chat.txt comes after them. Blank lines and lines starting with # are skipped.
+
+привет
+здравствуйте
+пока
+спасибо
+спс
+пожалуйста
+пж
+да
+нет
+ок
+окей
+ага
+неа
+лол
+кек
+хз
+норм
+щас
+сейчас
+чё
+че
+го
+бро
+нуб
+лаг
+хаха
+класс
+круто
+ладно
+давай
+жди
+подожди
+мб
+имхо

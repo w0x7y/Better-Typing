@@ -46,11 +46,21 @@ class LanguageDictionaryTest {
 	}
 
 	@Test
-	void languagesWithoutChatWordsGetTheSharedOnes() {
-		LanguageDictionary german = load(List.of("de_de", "en_us"),
-			Map.of("de_de.txt", "der\nhallo\n", "en_us.txt", "the\n", "en_us.chat.txt", "hello\n", "chat.txt", "gg\nafk\n")).orElseThrow();
+	void everyLanguageGetsItsOwnChatWordsAndTheSharedOnes() {
+		Map<String, String> files = Map.of("de_de.txt", "der\nhallo\n", "de_de.chat.txt", "digga", "en_us.txt", "the\n",
+			"en_us.chat.txt", "hello\n", "chat.txt", "gg\nafk\n");
+		LanguageDictionary german = load(List.of("de_de"), files).orElseThrow();
+		assertTrue(german.words().contains("digga"));
 		assertTrue(german.words().contains("gg"));
 		assertFalse(german.words().contains("hello"));
+		assertTrue(load(List.of("en_us"), files).orElseThrow().words().contains("afk"));
+	}
+
+	@Test
+	void rulesFileTurnsOnCompounds() {
+		Map<String, String> files = Map.of("de_de.txt", "Haus\nTür\n", "de_de.rules.txt", "compound.min_part=3\n", "nl_nl.txt", "huis\ndeur\n");
+		assertTrue(load(List.of("de_de"), files).orElseThrow().words().contains("Haustür"));
+		assertFalse(load(List.of("nl_nl"), files).orElseThrow().words().contains("huisdeur"));
 	}
 
 	@Test

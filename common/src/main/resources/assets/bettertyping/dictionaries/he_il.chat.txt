@@ -1,0 +1,36 @@
+# Words common in Hebrew chat: greetings, thanks, yes and no, laughter and short forms. Ones the
+# dictionary lacks count as correct, and they rank like en_us.chat.txt's. The shared gaming slang in
+# chat.txt comes after them. Blank lines and lines starting with # are skipped.
+
+היי
+שלום
+ביי
+תודה
+בבקשה
+כן
+לא
+אוקיי
+סבבה
+יאללה
+אחי
+אחותי
+וואלה
+אחלה
+חחח
+חחחח
+חחחחח
+לול
+מה
+נו
+אמא
+איתו
+איתך
+איתה
+היתה
+סורי
+רגע
+בוא
+תבוא
+מגניב
+באמת
+סתם
