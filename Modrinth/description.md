@@ -47,9 +47,11 @@ English with American or British spelling comes with the mod. German, Spanish, F
 Portuguese (Brazil and Portugal), Swedish, Russian, Hebrew and Arabic are a download each, about 1 MB.
 
 Pick one in the settings and press Save. Only then does the mod connect to the internet: it downloads the
-language from the mod's [GitHub releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.0.0)
-and keeps it only if its SHA-512 matches the one written into the mod. You can also put a language's jar
-in the mods folder like any mod, for a modpack or to play offline.
+language from the mod's [GitHub releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.1.0)
+and keeps it only if its SHA-512 matches the one written into the mod. A language you picked is downloaded
+again by itself when a mod update brings a new version of it, and a failed download is tried again when
+you open the settings or restart. You can also put a language's jar in the mods folder like any mod, for a
+modpack or to play offline.
 
 The default, Game language, uses the game's language when it's installed, and American English otherwise.
 

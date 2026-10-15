@@ -40,7 +40,7 @@ on a sign, when the list would cover a line you wrote, it goes below the word or
 
 english with american or british spelling comes with the mod. german, spanish, french, italian, dutch, portuguese (brazil and portugal), swedish, russian, hebrew and arabic are a download each, about 1 mb
 
-pick one in the settings and press save. the mod downloads it from [this repo's releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.0.0) and only keeps it if its sha-512 matches the one written into the mod. it's saved to `config/bettertyping/dictionaries/`, and if a download fails, `logs/latest.log` says why. a pack can also go in the mods folder like any mod, for modpacks or playing offline. nothing is downloaded unless you pick a language. a picked language whose pack changes with a mod update is downloaded again by itself, and a failed download is tried again when you open the settings or restart
+pick one in the settings and press save. the mod downloads it from [this repo's releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.1.0) and only keeps it if its sha-512 matches the one written into the mod. it's saved to `config/bettertyping/dictionaries/`, and if a download fails, `logs/latest.log` says why. a pack can also go in the mods folder like any mod, for modpacks or playing offline. nothing is downloaded unless you pick a language. a picked language whose pack changes with a mod update is downloaded again by itself, and a failed download is tried again when you open the settings or restart
 
 the default, game language, uses the game's language when it's installed, and american english otherwise
 
