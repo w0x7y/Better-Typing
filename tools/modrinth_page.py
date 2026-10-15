@@ -1,7 +1,7 @@
 """Preview the Modrinth project page; use --apply to upload the icon and gallery and update the summary, body and license.
 
-Gallery images are matched by title: ones already on the page are left alone, so running it twice
-doesn't upload duplicates. In Modrinth/description.md, `gallery:<title>` stands for that image's URL.
+Gallery images are matched by title: ones already on the page only get their description updated, so
+running it twice doesn't upload duplicates. In Modrinth/description.md, `gallery:<title>` stands for that image's URL.
 """
 
 import argparse
@@ -57,9 +57,14 @@ def apply(project: dict, gallery: list[dict], body: str, token: str, root: Path 
     request("PATCH", f"/project/{slug}/icon?ext=png", token, (root / project["icon"]).read_bytes(), "image/png")
     print(f"Uploaded {project['icon']} as the project icon")
     live = request("GET", f"/project/{slug}", token)
-    existing = {image["title"]: image["url"] for image in live["gallery"]}
+    existing = {image["title"]: image for image in live["gallery"]}
     for ordering, item in enumerate(gallery):
-        if item["title"] in existing:
+        image = existing.get(item["title"])
+        if image is not None:
+            if image.get("description") != item["description"]:
+                query = urllib.parse.urlencode({"url": image["url"], "description": item["description"]})
+                request("PATCH", f"/project/{slug}/gallery?{query}", token)
+                print(f"Updated the description of \"{item['title']}\"")
             continue
         query = urllib.parse.urlencode({
             "ext": "png",

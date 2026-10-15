@@ -14,7 +14,13 @@
   {
     "file": "assets/settings.png",
     "title": "Settings",
-    "description": "Open with /bettertyping or from Mod Menu: turn features on or off, change the shortcuts and edit your personal dictionary.",
+    "description": "Open with /bettertyping or from Mod Menu: turn features on or off, change the shortcuts, pick the language and edit your personal dictionary.",
+    "featured": false
+  },
+  {
+    "file": "assets/languages.png",
+    "title": "Languages",
+    "description": "English (US and UK) comes with the mod. Pick German, Spanish, French, Italian, Dutch, Brazilian Portuguese or Swedish and it's downloaded, about 1 MB each.",
     "featured": false
   }
 ]

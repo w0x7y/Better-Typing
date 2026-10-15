@@ -41,6 +41,8 @@ On macOS, Ctrl is Cmd, like vanilla's copy and paste.
 
 ## Languages
 
+![Picking a language](gallery:Languages)
+
 English with American or British spelling comes with the mod. German, Spanish, French, Italian, Dutch,
 Brazilian Portuguese and Swedish are a download each, about 1 MB.
 
