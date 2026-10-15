@@ -15,9 +15,7 @@ import dev.isxander.yacl3.api.controller.DropdownStringControllerBuilder;
 import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -101,21 +99,22 @@ public final class SettingsScreen {
 	 * isn't installed downloads it.
 	 */
 	private static Option<String> language(Settings settings) {
-		// Worked out once: telling whether a pack is installed reads files.
-		Map<String, Component> labels = new LinkedHashMap<>();
-		labels.put(LanguagePacks.GAME_LANGUAGE, Languages.label(LanguagePacks.GAME_LANGUAGE));
-		for (LanguagePacks.Language language : Languages.packs().languages()) {
-			labels.put(language.code(), Languages.label(language.code()));
-		}
 		Supplier<String> current = () -> settings.languages.isEmpty() ? LanguagePacks.GAME_LANGUAGE : settings.languages.get(0);
-		// Set by hand in settings.properties; keep it selectable.
-		labels.computeIfAbsent(current.get(), Languages::label);
+		List<String> choices = new ArrayList<>();
+		choices.add(LanguagePacks.GAME_LANGUAGE);
+		for (LanguagePacks.Language language : Languages.packs().languages()) {
+			choices.add(language.code());
+		}
+		if (!choices.contains(current.get())) {
+			// Set by hand in settings.properties; keep it selectable.
+			choices.add(current.get());
+		}
 		return Option.<String>createBuilder()
 			.name(text("language"))
 			.description(OptionDescription.of(text("language.description")))
 			.binding(LanguagePacks.GAME_LANGUAGE, current, Languages::choose)
-			.controller(option -> CyclingListControllerBuilder.create(option).values(List.copyOf(labels.keySet()))
-				.formatValue(labels::get))
+			// Labels are worked out as they're drawn, so a finished download stops saying "download".
+			.controller(option -> CyclingListControllerBuilder.create(option).values(choices).formatValue(Languages::label))
 			.build();
 	}
 

@@ -72,6 +72,8 @@ public final class LanguagePacks {
 	private final Http http;
 	// Whether each downloaded file matched its pinned hash, so files are hashed once per game.
 	private final Map<String, Boolean> verified = new HashMap<>();
+	// Whether each language is bundled (or installed as a mod); that can't change while the game runs.
+	private final Map<String, Boolean> bundledLanguages = new HashMap<>();
 
 	/**
 	 * @param dir where downloaded packs are kept
@@ -188,19 +190,19 @@ public final class LanguagePacks {
 		return null;
 	}
 
-	/** Whether the language's words are here: bundled, installed as a mod, or downloaded. */
+	/** Whether the language's words are here: bundled, installed as a mod, or downloaded. Cheap after the first call. */
 	public synchronized boolean installed(String code) {
 		if (!LanguageDictionary.isCode(code)) {
 			return false;
 		}
-		try (InputStream in = bundled.open(code + ".txt")) {
-			if (in != null) {
-				return true;
+		boolean inJar = bundledLanguages.computeIfAbsent(code, c -> {
+			try (InputStream in = bundled.open(c + ".txt")) {
+				return in != null;
+			} catch (IOException e) {
+				return false;
 			}
-		} catch (IOException e) {
-			return false;
-		}
-		return downloaded(code);
+		});
+		return inJar || downloaded(code);
 	}
 
 	/**

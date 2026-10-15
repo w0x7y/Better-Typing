@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -178,6 +179,23 @@ class LanguagePacksTest {
 		packs.download("de_de");
 		assertEquals(List.of("de_de", "en_us"), packs.resolve(List.of("de_de"), "en_us"));
 		assertEquals(List.of("en_us"), packs.resolve(List.of("xx_xx", "../de_de"), "en_us"));
+	}
+
+	@Test
+	void bundledCatalogIsValid() throws IOException {
+		List<LanguagePacks.Language> languages;
+		try (InputStream in = Files.newInputStream(Path.of("../common/src/main/resources/assets/bettertyping/languages.txt"))) {
+			languages = LanguagePacks.readCatalog(in);
+		}
+		assertEquals(List.of("en_us", "en_gb"), languages.stream().filter(l -> l.pack() == null).map(LanguagePacks.Language::code).toList());
+		for (LanguagePacks.Language language : languages) {
+			assertTrue(Files.exists(Path.of("../common/src/main/resources/assets/bettertyping/dictionaries/" + language.code() + ".txt"))
+				!= (language.pack() != null), language.code() + " is either bundled or a pack");
+			if (language.pack() != null) {
+				assertEquals(2, language.pack().urls().size(), language.code() + " has a Modrinth and a GitHub URL");
+			}
+		}
+		assertEquals(languages.size(), languages.stream().map(LanguagePacks.Language::code).distinct().count());
 	}
 
 	@Test
