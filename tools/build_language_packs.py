@@ -4,12 +4,15 @@
 Each pack is a small Fabric mod jar holding assets/bettertyping/dictionaries/<code>.txt: the words of
 wordfreq's list for that language (most common first) that the LibreOffice dictionary accepts, up
 to max_words. French and Italian also list the elisions their dictionary allows (l', dell'), so
-"l'homme" counts as correct. The jar carries the GPL-3.0 text, a NOTICE and the upstream readmes.
+"l'homme" counts as correct. Arabic keeps chat spellings without the hamza (انا for أنا) when the
+dictionary accepts the word with it. The jar carries its licence text, a NOTICE and the upstream
+readmes.
 
 Needs the pinned wordfreq and spylls versions (pip install wordfreq==X spylls==Y) and the
 LibreOffice dictionaries files at the pinned commit, e.g. from
-https://raw.githubusercontent.com/LibreOffice/dictionaries/<commit>/<path>. Every file is checked
-against its SHA-256 in the config. Prints one line per pack for the mod's language catalog.
+https://raw.githubusercontent.com/LibreOffice/dictionaries/<commit>/<path>, and the AGPL text from
+https://www.gnu.org/licenses/agpl-3.0.txt as licenses/agpl-3.0.txt. Every file is checked against its
+SHA-256 in the config. Prints one line per pack for the mod's language catalog.
 """
 import argparse
 import hashlib
@@ -83,6 +86,25 @@ def elisions(aff_path):
     return sorted(found)
 
 
+def arabic_hamza(token):
+    """Standard spellings of a chat spelling that leaves out the hamza: انا -> أنا, الى -> إلى, الان -> الآن."""
+    positions = [0]
+    if token.startswith("ال"):
+        positions.append(2)
+    elif token[:1] in "وفبلك":
+        positions.append(1)
+    forms = {token}
+    for position in positions:
+        if position < len(token) and token[position] == "ا":
+            forms |= {form[:position] + alef + form[position + 1:] for form in forms for alef in "أإآ"}
+    endings = {"ي": "ى", "ى": "ي", "ه": "ة"}
+    forms |= {form[:-1] + endings[form[-1]] for form in forms if form[-1:] in endings}
+    return forms - {token}
+
+
+SPELLINGS = {"arabic_hamza": arabic_hamza}
+
+
 def words(code, language, sources, max_words):
     """The pack's word list: wordfreq's words the dictionary accepts, most common first."""
     import wordfreq
@@ -106,6 +128,8 @@ def words(code, language, sources, max_words):
         else:
             # Italian "po'" is checked without its apostrophe, as the mod strips apostrophes at word edges.
             form = token if accepted(token + "'") else None
+            if form is None and language.get("spelling"):
+                form = token if any(accepted(variant) for variant in SPELLINGS[language["spelling"]](token)) else None
         if form and form not in seen:
             seen.add(form)
             kept.append(form)
@@ -127,10 +151,14 @@ def notice(code, language, config, count, elided, commit):
         f"most common first. Words it accepts were kept: in lowercase when the dictionary allows it, otherwise "
         f"capitalized or in capitals. Numbers and single letters were left out, and the list stops at "
         f"{config['max_words']:,} words. It ends up with {count:,}.", "1. ")]
+    if language.get("spelling") == "arabic_hamza":
+        steps.append(wrap(
+            "Words spelled without their hamza, as often in chat (انا for أنا), were kept when the dictionary "
+            "accepts them with it.", f"{len(steps) + 1}. "))
     if elided:
         steps.append(wrap(
             f"The list ends with the elisions the dictionary allows: {', '.join(elided)}. A word of the list "
-            f"with one of them in front counts as correct too.", "2. "))
+            f"with one of them in front counts as correct too.", f"{len(steps) + 1}. "))
     return f"""\
 Better Typing: {language['english']} word list ({code}), pack {config['pack_version']}
 {'=' * 60}
@@ -138,7 +166,7 @@ Better Typing: {language['english']} word list ({code}), pack {config['pack_vers
 assets/bettertyping/dictionaries/{code}.txt holds {language['english']} words for Better Typing's spell
 check and autocomplete, one per line, most common first.
 
-Licence: GNU General Public License version 3 only (GPL-3.0-only), in LICENSE.
+Licence: {wrap(language.get("license_note", "GNU General Public License version 3 only (GPL-3.0-only), in LICENSE."))}
 
 How it was made
 ---------------
@@ -193,16 +221,18 @@ def build(code, config, sources, out, commit):
         "description": f"{language['english']} words for Better Typing's spell check and autocomplete.",
         "authors": ["Idan Gilboa"],
         "contact": {"sources": REPOSITORY},
-        "license": "GPL-3.0-only",
+        "license": language.get("license", "GPL-3.0-only").split(" AND "),
         "environment": "client",
         "depends": {"bettertyping": ">=0.2.0"},
     }
     entries = {
         "fabric.mod.json": json.dumps(mod, indent=2, ensure_ascii=False) + "\n",
         f"assets/bettertyping/dictionaries/{code}.txt": text,
-        "LICENSE": (sources / config["gpl_text"]).read_bytes(),
+        "LICENSE": (sources / language.get("license_text", config["gpl_text"])).read_bytes(),
         "NOTICE.txt": notice(code, language, config, len(kept), elided, commit),
     }
+    if language.get("license_text", config["gpl_text"]) != config["gpl_text"]:
+        entries["LICENSE-GPL-3.0"] = (sources / config["gpl_text"]).read_bytes()
     for name in language["upstream"]:
         entries[f"upstream/{Path(name).name}"] = (sources / name).read_bytes()
     jar = out / f"bettertyping-{code}-{config['pack_version']}.jar"
