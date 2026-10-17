@@ -1,29 +1,37 @@
 package com.bettertyping.core;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 
 /**
- * Keeps the language dictionary in step with the player's languages and the game's: loads the first
+ * Keeps the language dictionaries in step with the player's languages and the game's: loads every
  * installed one, and downloads a pack the player chose that isn't installed, or whose pinned file
- * changed with a mod update. "Game language" never downloads. A download that failed isn't tried again
- * until the player picks that language again or restarts the game.
+ * changed with a mod update. "Game language" uses the game language's catalog entry and never
+ * downloads. English (US) stands in when none of them is installed, or none could be read. A download
+ * that failed isn't tried again until {@link #choose} (the settings opening or saving) or a restart.
  *
  * <p>All of it runs on the game thread except loading and downloading, which run on {@code background}.
  * Their results come back through {@code gameThread}, where a load that a newer choice overtook is
  * dropped.
  */
 public final class DictionarySelection {
+	/** The setting for "use the game's language". */
+	public static final String GAME_LANGUAGE = "auto";
+	/** Bundled, so there's always a dictionary. */
+	private static final String FALLBACK = "en_us";
+
 	/** Where a language stands, for showing it in the settings. */
 	public enum Status { INSTALLED, DOWNLOADING, FAILED, NOT_INSTALLED }
 
 	/** Hears what happened, on the game thread. */
 	public interface Listener {
-		void loaded(LanguageDictionary dictionary, long millis);
+		void loaded(List<LanguageDictionary> dictionaries, long millis);
 
 		/** A language was passed over while loading, because it couldn't be read. */
 		void skipped(String language, IOException reason);
@@ -41,8 +49,8 @@ public final class DictionarySelection {
 	private final Listener listener;
 	private final Set<String> downloading = new HashSet<>();
 	private final Set<String> failed = new HashSet<>();
-	private List<String> configured = List.of(LanguagePacks.GAME_LANGUAGE);
-	private String gameLanguage = LanguagePacks.FALLBACK;
+	private List<String> configured = List.of(GAME_LANGUAGE);
+	private String gameLanguage = FALLBACK;
 	private List<String> loaded = List.of();
 	private int loads;
 
@@ -54,8 +62,8 @@ public final class DictionarySelection {
 	}
 
 	/**
-	 * Brings the dictionary in step with these languages: starts any download they need and loads the
-	 * first installed one. Cheap when nothing changed, so it can run on every screen.
+	 * Brings the dictionaries in step with these languages: starts any download they need and loads the
+	 * installed ones. Cheap when nothing changed, so it can run on every screen.
 	 */
 	public void update(List<String> configured, String gameLanguage) {
 		this.configured = List.copyOf(configured);
@@ -67,7 +75,7 @@ public final class DictionarySelection {
 				download(language);
 			}
 		}
-		List<String> languages = packs.resolve(this.configured, gameLanguage);
+		List<String> languages = resolve();
 		if (languages.equals(loaded)) {
 			return;
 		}
@@ -76,7 +84,7 @@ public final class DictionarySelection {
 		background.execute(() -> load(languages, load));
 	}
 
-	/** {@link #update} after the player picked these languages: a download that failed is tried again. */
+	/** {@link #update}, trying a download that failed again: the settings opened or the player saved them. */
 	public void choose(List<String> configured, String gameLanguage) {
 		failed.removeAll(configured);
 		update(configured, gameLanguage);
@@ -92,19 +100,53 @@ public final class DictionarySelection {
 		return failed.contains(code) ? Status.FAILED : Status.NOT_INSTALLED;
 	}
 
+	/**
+	 * The installed languages to use: {@link #GAME_LANGUAGE} stands for the game language's catalog entry,
+	 * and so does an empty list, which the settings file also reads as the default. A language that isn't
+	 * installed (yet) is left out, so the list changes once its download finishes.
+	 */
+	private List<String> resolve() {
+		List<String> codes = new ArrayList<>();
+		for (String code : configured.isEmpty() ? List.of(GAME_LANGUAGE) : configured) {
+			if (code.equals(GAME_LANGUAGE)) {
+				code = forGame();
+			}
+			if (code != null && !codes.contains(code) && packs.installed(code)) {
+				codes.add(code);
+			}
+		}
+		if (codes.isEmpty()) {
+			codes.add(FALLBACK);
+		}
+		return codes;
+	}
+
+	/** The catalog language used for the game's language (de_de, or en_gb for en_au), or null. */
+	private String forGame() {
+		String code = gameLanguage.toLowerCase(Locale.ROOT);
+		if (packs.language(code) != null) {
+			return code;
+		}
+		for (LanguagePacks.Language language : packs.languages()) {
+			if (language.gameLanguages().contains(code)) {
+				return language.code();
+			}
+		}
+		return null;
+	}
+
 	private void load(List<String> languages, int load) {
 		long start = System.nanoTime();
-		Optional<LanguageDictionary> dictionary;
-		try {
-			dictionary = packs.load(languages, (code, reason) -> gameThread.execute(() -> listener.skipped(code, reason)));
-		} catch (RuntimeException e) {
-			gameThread.execute(() -> listener.skipped(languages.get(0), new IOException("Loading failed", e)));
-			return;
+		BiConsumer<String, IOException> skipped = (code, reason) -> gameThread.execute(() -> listener.skipped(code, reason));
+		List<LanguageDictionary> dictionaries = packs.load(languages, skipped);
+		if (dictionaries.isEmpty() && !languages.contains(FALLBACK)) {
+			dictionaries = packs.load(List.of(FALLBACK), skipped);
 		}
+		List<LanguageDictionary> result = dictionaries;
 		long millis = (System.nanoTime() - start) / 1_000_000;
 		gameThread.execute(() -> {
-			if (load == loads) {
-				dictionary.ifPresent(words -> listener.loaded(words, millis));
+			if (load == loads && !result.isEmpty()) {
+				listener.loaded(result, millis);
 			}
 		});
 	}

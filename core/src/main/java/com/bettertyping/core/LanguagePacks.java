@@ -2,7 +2,6 @@ package com.bettertyping.core;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,10 +9,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.SequenceInputStream;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -23,21 +18,12 @@ import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Flow;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -58,10 +44,6 @@ import java.util.zip.ZipFile;
  * is on the classpath, so it's found like a bundled list.
  */
 public final class LanguagePacks {
-	/** The setting for "use the game's language". */
-	public static final String GAME_LANGUAGE = "auto";
-	/** Always tried last, so there's a dictionary whatever is configured. */
-	public static final String FALLBACK = "en_us";
 	private static final Pattern CODE = Pattern.compile("[a-z]{2,3}_[a-z]{2,4}");
 	private static final Pattern SHA512 = Pattern.compile("[0-9a-f]{128}");
 	private static final String ENTRY = "assets/bettertyping/dictionaries/";
@@ -74,6 +56,14 @@ public final class LanguagePacks {
 	 * @param pack null when the language is bundled with the mod
 	 */
 	public record Language(String code, String name, List<String> gameLanguages, Pack pack) {
+		/**
+		 * Its flag in the mod's flags font: a private-use character for the country in its code (de_de:
+		 * Germany), U+E000 + 26 * first letter + second letter. tools/make_flags.py draws the same ones.
+		 */
+		public String flag() {
+			String country = code.substring(code.indexOf('_') + 1);
+			return Character.toString(0xE000 + 26 * (country.charAt(0) - 'a') + country.charAt(1) - 'a');
+		}
 	}
 
 	/** A downloadable pack: its exact size and SHA-512, and where to get it. */
@@ -87,7 +77,7 @@ public final class LanguagePacks {
 		InputStream open(String file) throws IOException;
 	}
 
-	/** Fetches a URL. Implemented over {@link HttpClient} by {@link #standardHttp}; tests use their own. */
+	/** Fetches a URL. The game uses {@link StandardHttp}; tests use their own. */
 	@FunctionalInterface
 	public interface Http {
 		/** The response body. Fails for anything but a successful response, or a body over {@code maxBytes}. */
@@ -168,102 +158,6 @@ public final class LanguagePacks {
 		return CODE.matcher(code).matches();
 	}
 
-	/**
-	 * An {@link Http} over the JDK's client. The client starts on the first download, and a download has
-	 * {@code deadline} to finish, however slowly the bytes arrive.
-	 */
-	public static Http standardHttp(String userAgent, Duration deadline) {
-		return new Http() {
-			private HttpClient client;
-
-			@Override
-			public InputStream get(URI uri, long maxBytes) throws IOException {
-				return new ByteArrayInputStream(fetch(client(), uri, userAgent, maxBytes, deadline));
-			}
-
-			private synchronized HttpClient client() {
-				if (client == null) {
-					client = HttpClient.newBuilder()
-						.connectTimeout(Duration.ofSeconds(10))
-						.followRedirects(HttpClient.Redirect.NORMAL)
-						.build();
-				}
-				return client;
-			}
-		};
-	}
-
-	private static byte[] fetch(HttpClient client, URI uri, String userAgent, long maxBytes, Duration deadline) throws IOException {
-		HttpRequest request = HttpRequest.newBuilder(uri).timeout(deadline).header("User-Agent", userAgent).build();
-		CompletableFuture<HttpResponse<byte[]>> response = client.sendAsync(request, info ->
-			info.statusCode() == 200 ? new LimitedBody(maxBytes) : HttpResponse.BodySubscribers.replacing(null));
-		try {
-			HttpResponse<byte[]> result = response.get(deadline.toMillis(), TimeUnit.MILLISECONDS);
-			if (result.statusCode() != 200) {
-				throw new IOException("HTTP " + result.statusCode() + " from " + uri);
-			}
-			return result.body();
-		} catch (TimeoutException e) {
-			response.cancel(true);
-			throw new IOException("No complete answer from " + uri + " within " + deadline.toSeconds() + " s", e);
-		} catch (ExecutionException e) {
-			throw e.getCause() instanceof IOException io ? io : new IOException("Couldn't fetch " + uri, e.getCause());
-		} catch (InterruptedException e) {
-			response.cancel(true);
-			Thread.currentThread().interrupt();
-			throw new IOException("Interrupted while fetching " + uri, e);
-		}
-	}
-
-	/** Collects a response body, giving up as soon as it's larger than allowed. */
-	private static final class LimitedBody implements HttpResponse.BodySubscriber<byte[]> {
-		private final CompletableFuture<byte[]> result = new CompletableFuture<>();
-		private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-		private final long maxBytes;
-		private Flow.Subscription subscription;
-
-		LimitedBody(long maxBytes) {
-			this.maxBytes = maxBytes;
-		}
-
-		@Override
-		public CompletionStage<byte[]> getBody() {
-			return result;
-		}
-
-		@Override
-		public void onSubscribe(Flow.Subscription subscription) {
-			this.subscription = subscription;
-			subscription.request(Long.MAX_VALUE);
-		}
-
-		@Override
-		public void onNext(List<ByteBuffer> buffers) {
-			if (result.isDone()) {
-				return;
-			}
-			for (ByteBuffer buffer : buffers) {
-				byte[] chunk = new byte[buffer.remaining()];
-				buffer.get(chunk);
-				bytes.writeBytes(chunk);
-			}
-			if (bytes.size() > maxBytes) {
-				subscription.cancel();
-				result.completeExceptionally(new IOException("Larger than the expected " + maxBytes + " bytes"));
-			}
-		}
-
-		@Override
-		public void onError(Throwable error) {
-			result.completeExceptionally(error);
-		}
-
-		@Override
-		public void onComplete() {
-			result.complete(bytes.toByteArray());
-		}
-	}
-
 	/** Every language in the catalog, in catalog order. */
 	public List<Language> languages() {
 		return List.copyOf(catalog.values());
@@ -272,21 +166,6 @@ public final class LanguagePacks {
 	/** The catalog's language, or null. */
 	public Language language(String code) {
 		return catalog.get(code);
-	}
-
-	/** The catalog language used for a game language (de_de, or en_gb for en_au), or null. */
-	public Language forGame(String gameLanguage) {
-		String code = gameLanguage.toLowerCase(Locale.ROOT);
-		Language exact = catalog.get(code);
-		if (exact != null) {
-			return exact;
-		}
-		for (Language language : catalog.values()) {
-			if (language.gameLanguages().contains(code)) {
-				return language;
-			}
-		}
-		return null;
 	}
 
 	/** Whether the language's words are here: bundled, installed as a mod, or downloaded. Cheap after the first call. */
@@ -305,45 +184,26 @@ public final class LanguagePacks {
 	}
 
 	/**
-	 * The installed languages to try, in order, for the configured ones: {@link #GAME_LANGUAGE} stands for
-	 * the game language's catalog entry, and {@link #FALLBACK} comes last. A language that isn't
-	 * installed (yet) is left out, so the list changes once its download finishes.
+	 * Loads each of {@code languages} that has a word list. Each language passed over, because it isn't a
+	 * language code, has no word list or couldn't be read, is reported to {@code skipped}. Reads files;
+	 * call it off the game thread.
 	 */
-	public List<String> resolve(List<String> configured, String gameLanguage) {
-		List<String> codes = new ArrayList<>();
-		for (String code : configured) {
-			if (code.equals(GAME_LANGUAGE)) {
-				Language language = forGame(gameLanguage);
-				code = language != null ? language.code() : null;
-			}
-			if (code != null && !codes.contains(code) && installed(code)) {
-				codes.add(code);
-			}
-		}
-		if (!codes.contains(FALLBACK)) {
-			codes.add(FALLBACK);
-		}
-		return codes;
-	}
-
-	/**
-	 * Loads the first of {@code languages} that has a word list. Each language passed over, because it
-	 * isn't a language code, has no word list or couldn't be read, is reported to {@code skipped}. Reads
-	 * files; call it off the game thread.
-	 */
-	public Optional<LanguageDictionary> load(List<String> languages, BiConsumer<String, IOException> skipped) {
+	public List<LanguageDictionary> load(List<String> languages, BiConsumer<String, IOException> skipped) {
+		List<LanguageDictionary> dictionaries = new ArrayList<>();
 		for (String language : languages) {
 			if (!isCode(language)) {
 				skipped.accept(language, new IOException("Not a language code"));
 				continue;
 			}
 			try {
-				return Optional.of(new LanguageDictionary(language, loadWords(language)));
+				dictionaries.add(new LanguageDictionary(language, loadWords(language)));
 			} catch (IOException e) {
 				skipped.accept(language, e);
+			} catch (RuntimeException e) {
+				skipped.accept(language, new IOException("Loading failed", e));
 			}
 		}
-		return Optional.empty();
+		return dictionaries;
 	}
 
 	private WordList loadWords(String code) throws IOException {

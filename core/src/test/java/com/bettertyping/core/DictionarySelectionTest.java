@@ -13,6 +13,7 @@ import java.security.MessageDigest;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,8 @@ class DictionarySelectionTest {
 	Path dir;
 
 	private final byte[] pack = jar("der\ndie\nHaus\n");
+	/** The mod's dictionary folder; reading a file whose content is "unreadable" fails. */
+	private final Map<String, String> bundled = new HashMap<>(Map.of("en_us.txt", "the\n", "en_gb.txt", "colour\n"));
 	private final List<String> events = new ArrayList<>();
 	/** Work for the game thread, run when the test says so. */
 	private final Deque<Runnable> gameThread = new ArrayDeque<>();
@@ -45,10 +48,14 @@ class DictionarySelectionTest {
 	@BeforeEach
 	void setUp() throws IOException {
 		String catalog = "en_us\tEnglish (US)\t\nen_gb\tEnglish (UK)\ten_au\n"
-			+ "de_de\tDeutsch\t\t" + pack.length + "\t" + sha512(pack) + "\t" + RELEASE + "\n";
-		Map<String, String> bundled = Map.of("en_us.txt", "the\n", "en_gb.txt", "colour\n");
+			+ "de_de\tDeutsch\tde_at de_ch\t" + pack.length + "\t" + sha512(pack) + "\t" + RELEASE + "\n";
 		packs = new LanguagePacks(dir, LanguagePacks.readCatalog(new ByteArrayInputStream(catalog.getBytes(StandardCharsets.UTF_8))),
-			file -> bundled.containsKey(file) ? new ByteArrayInputStream(bundled.get(file).getBytes(StandardCharsets.UTF_8)) : null,
+			file -> {
+				if ("unreadable".equals(bundled.get(file))) {
+					throw new IOException("Broken " + file);
+				}
+				return bundled.containsKey(file) ? new ByteArrayInputStream(bundled.get(file).getBytes(StandardCharsets.UTF_8)) : null;
+			},
 			(uri, maxBytes) -> {
 				fetches++;
 				if (!online) {
@@ -65,8 +72,8 @@ class DictionarySelectionTest {
 		};
 		selection = new DictionarySelection(packs, inBackground, gameThread::add, new DictionarySelection.Listener() {
 			@Override
-			public void loaded(LanguageDictionary dictionary, long millis) {
-				events.add("loaded " + dictionary.language());
+			public void loaded(List<LanguageDictionary> dictionaries, long millis) {
+				events.add("loaded " + String.join(" ", dictionaries.stream().map(LanguageDictionary::language).toList()));
 			}
 
 			@Override
@@ -120,7 +127,15 @@ class DictionarySelectionTest {
 	}
 
 	@Test
-	void loadsTheFirstInstalledLanguageOnce() {
+	void loadsEveryChosenLanguageTogether() {
+		selection.update(List.of("en_gb", "de_de"), "en_us");
+		runGameThread();
+		runGameThread();
+		assertEquals("loaded en_gb de_de", events.get(events.size() - 1));
+	}
+
+	@Test
+	void loadsTheInstalledLanguageOnce() {
 		selection.update(List.of("en_gb"), "en_us");
 		selection.update(List.of("en_gb"), "en_us");
 		runGameThread();
@@ -129,12 +144,43 @@ class DictionarySelectionTest {
 
 	@Test
 	void gameLanguageFollowsTheGameAndNeverDownloads() {
-		selection.update(List.of(LanguagePacks.GAME_LANGUAGE), "en_au");
+		selection.update(List.of(DictionarySelection.GAME_LANGUAGE), "en_au");
 		runGameThread();
-		selection.update(List.of(LanguagePacks.GAME_LANGUAGE), "de_de");
+		selection.update(List.of(DictionarySelection.GAME_LANGUAGE), "de_de");
 		runGameThread();
-		assertEquals(List.of("loaded en_gb", "loaded en_us"), events, "German isn't installed, so English (US)");
+		selection.update(List.of(), "en_au");
+		runGameThread();
+		assertEquals(List.of("loaded en_gb", "loaded en_us", "loaded en_gb"), events, "German isn't installed, so English (US); none chosen is the game language");
 		assertEquals(0, fetches);
+	}
+
+	@Test
+	void gameLanguageUsesItsCatalogEntryOnceInstalled() {
+		selection.choose(GERMAN, "en_us");
+		runGameThread();
+		runGameThread();
+		selection.update(List.of(DictionarySelection.GAME_LANGUAGE), "de_CH");
+		runGameThread();
+		assertEquals("loaded de_de", events.get(events.size() - 1), "Swiss German uses the German pack");
+		selection.update(List.of("en_gb", "de_de", DictionarySelection.GAME_LANGUAGE), "de_at");
+		runGameThread();
+		assertEquals("loaded en_gb de_de", events.get(events.size() - 1), "each language once");
+	}
+
+	@Test
+	void englishStandsInWhenNothingChosenIsInstalledOrReadable() {
+		holdBackground = true;
+		selection.update(List.of("xx_xx", "../de_de", "de_de"), "en_us");
+		background.removeLast().run();
+		runGameThread();
+		assertEquals(List.of("downloading de_de", "loaded en_us"), events, "the download is still running");
+
+		events.clear();
+		bundled.put("en_gb.rules.txt", "unreadable");
+		selection.update(List.of("en_gb"), "en_us");
+		background.removeLast().run();
+		runGameThread();
+		assertEquals(List.of("skipped en_gb", "loaded en_us"), events);
 	}
 
 	@Test

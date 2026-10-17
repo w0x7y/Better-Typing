@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -39,12 +40,22 @@ class SpellCheckerTest {
 		return checker(english);
 	}
 
-	private SpellChecker checker(WordList language) {
+	private SpellChecker checker(WordList... languages) {
 		SpellChecker checker = new SpellChecker(tmp.resolve("personal.txt"), e -> {
 			throw new AssertionError(e);
 		});
-		checker.setLanguage(language);
+		checker.setLanguages(List.of(languages));
 		return checker;
+	}
+
+	@Test
+	void wordsOfEveryLanguageCountAndAreSuggested() {
+		SpellChecker checker = checker(english, WordList.caseSensitive(Map.of("Haus", 0, "Hausaufgabe", 1)));
+		assertTrue(checker.isCorrect("receive"));
+		assertTrue(checker.isCorrect("Haus"));
+		assertFalse(checker.isCorrect("Hauss"));
+		assertTrue(checker.suggest("Hauss", 3).contains("Haus"), "corrections come from every language");
+		assertTrue(checker.complete("Hausau", 3).contains("Hausaufgabe"), "completions come from every language");
 	}
 
 	@Test
@@ -133,7 +144,7 @@ class SpellCheckerTest {
 		Files.writeString(blocker, "a file where a folder should be");
 		List<IOException> errors = new ArrayList<>();
 		SpellChecker checker = new SpellChecker(blocker.resolve("personal.txt"), errors::add);
-		checker.setLanguage(english);
+		checker.setLanguages(List.of(english));
 		assertEquals(1, checker.misspelled("zqxw").size());
 
 		checker.addPersonalWord("zqxw");
@@ -170,7 +181,7 @@ class SpellCheckerTest {
 		Files.write(file, notUtf8);
 		List<IOException> errors = new ArrayList<>();
 		SpellChecker checker = new SpellChecker(file, errors::add);
-		checker.setLanguage(english);
+		checker.setLanguages(List.of(english));
 		assertEquals(1, errors.size(), "reading fails");
 
 		checker.addPersonalWord("zqxw");

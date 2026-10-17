@@ -88,7 +88,7 @@ public final class TypingSession {
 		}
 		TextState state = field.state();
 		List<WordSpan> words = checker.misspelled(state.text());
-		WordSpan typing = focused && !state.hasSelection() ? Tokenizer.wordEndingAt(state.text(), state.cursor()) : null;
+		WordSpan typing = focused ? Tokenizer.wordBeingTyped(state) : null;
 		if (typing == null || words.isEmpty()) {
 			return words;
 		}

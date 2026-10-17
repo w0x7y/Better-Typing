@@ -36,13 +36,13 @@ on a sign, when the list would cover a line you wrote, it goes below the word or
 
 **languages**
 
-<img width="560" alt="picking a language that needs a download" src="assets/languages.png" />
+<img width="560" alt="the language list, each with its flag" src="assets/languages.png" />
 
 english with american or british spelling comes with the mod. german, spanish, french, italian, dutch, portuguese (brazil and portugal), swedish, russian, hebrew and arabic are a download each, about 1 mb
 
-pick one in the settings and press save. the mod downloads it from [this repo's releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.1.0) and only keeps it if its sha-512 matches the one written into the mod. it's saved to `config/bettertyping/dictionaries/`, and if a download fails, `logs/latest.log` says why. a pack can also go in the mods folder like any mod, for modpacks or playing offline. nothing is downloaded unless you pick a language. a picked language whose pack changes with a mod update is downloaded again by itself, and a failed download is tried again when you open the settings or restart
+tick the ones you write in and press save. a word is correct if any of them knows it, and suggestions and autocomplete come from all of them. a language that isn't installed yet is downloaded from [this repo's releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.1.0), and the mod only keeps it if its sha-512 matches the one written into the mod. it's saved to `config/bettertyping/dictionaries/`, and if a download fails, `logs/latest.log` says why. a pack can also go in the mods folder like any mod, for modpacks or playing offline. nothing is downloaded unless you tick a language. a ticked language whose pack changes with a mod update is downloaded again by itself, and a failed download is tried again when you open the settings or restart
 
-the default, game language, uses the game's language when it's installed, and american english otherwise
+the default, game language, uses the game's language when it's installed, and is what you get with nothing ticked. when none of the ticked languages is installed, american english is used
 
 every language knows its chat words (hallo, mdr, kkk, סבבה, يلا), plus gaming slang like gg, afk and xD. german, dutch and swedish also accept compounds made of known words, like diamantschwert. item and mob names count as correct in the game's language, modded ones too. player names don't
 
@@ -54,7 +54,7 @@ open them with `/bettertyping`, or the config button in mod menu
 
 - turn spell check, autocomplete and undo/redo on or off
 - change the three shortcuts: tick ctrl, shift and alt and pick a key
-- pick the language
+- tick the languages you write in, each shown with its flag
 - see and remove the words in your personal dictionary
 
 they're saved to `config/bettertyping/settings.properties` and `config/bettertyping/personal_dictionary.txt`
@@ -71,10 +71,10 @@ gradle runs on java 25, the 1.21.11 jar targets java 21
 ./gradlew build                     # every version, jars in versions/<mc>/build/libs/
 ./gradlew :26.3:runClient           # a dev client, its worlds stay in run/26.3
 ./gradlew :core:test                # unit tests
-./gradlew :26.3:runClientGameTest   # opens the game, types through chat, a sign and a book, then the settings and languages
+./gradlew :26.3:runClientGameTest   # opens the game, types through chat, a sign, a book and its title and an anvil, then the settings and languages
 ```
 
-the in-game test checks the text after every step (29 checks, plus that every shortcut key is a real minecraft key) and saves screenshots to `run/<mc>/screenshots/`. the images above come from there
+the in-game test checks the text after every step (38 checks, plus that every shortcut key is a real minecraft key) and saves screenshots to `run/<mc>/screenshots/`. the images above come from there
 
 <details>
 <summary>how it's laid out</summary>
@@ -83,12 +83,12 @@ the in-game test checks the text after every step (29 checks, plus that every sh
 
 | folder | what's in it |
 |---|---|
-| `core/` | plain java, no minecraft. `TypingSession` is the way in: one per screen, it takes keys and characters and says what to draw. behind it are the spell checker, autocomplete and undo history. `OverlayLayout` works out where squiggles and the list go, and `LanguagePacks` downloads and checks languages |
+| `core/` | plain java, no minecraft. `TypingSession` is the way in: one per screen, it takes keys and characters and says what to draw. behind it are the spell checker, autocomplete and undo history. `OverlayLayout` works out where squiggles and the list go, `DictionarySelection` decides which languages to load, and `LanguagePacks` downloads and checks them |
 | `common/` | minecraft code every version shares: screen hooks, drawing, item and mob names, the settings screen, switching languages. `field/` adapts each kind of text field (text box, sign line, book page) |
 | `common/src/gametest/` | the in-game test |
 | `variants/` | code for groups of versions that share an api: how screens draw, which key codes there are, small 26.2 changes |
 | `versions/<mc>/` | one gradle project per version. its `gradle.properties` picks minecraft, fabric api, yacl, mod menu and which variants to use |
-| `tools/` | builds the word lists and language packs, and updates the modrinth page and versions |
+| `tools/` | builds the word lists and language packs, draws the flags, and updates the modrinth page and versions |
 
 the words used in the code are in [CONTEXT.md](CONTEXT.md)
 

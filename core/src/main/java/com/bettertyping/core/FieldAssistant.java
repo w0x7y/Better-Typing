@@ -54,7 +54,7 @@ final class FieldAssistant {
 			return true;
 		}
 		TextState state = history.current();
-		if (!settings.spellCheck || !checker.isReady() || state.hasSelection()) {
+		if (!settings.spellCheck || state.hasSelection()) {
 			return false;
 		}
 		WordSpan word = Tokenizer.wordAt(state.text(), state.cursor());
@@ -76,7 +76,7 @@ final class FieldAssistant {
 	 * in a spelling list, where the cursor is inside the word, it's dropped.
 	 */
 	boolean space(TypingField field) {
-		if (!field.assist() || popup == null || popup.selected() < 0) {
+		if (popup == null || popup.selected() < 0) {
 			return false;
 		}
 		Popup accepted = popup;
@@ -142,10 +142,7 @@ final class FieldAssistant {
 	}
 
 	private Popup autocompletePopup(TextState state) {
-		if (!settings.autocomplete || state.hasSelection()) {
-			return null;
-		}
-		WordSpan word = Tokenizer.wordEndingAt(state.text(), state.cursor());
+		WordSpan word = settings.autocomplete ? Tokenizer.wordBeingTyped(state) : null;
 		if (word == null || word.length() < MIN_PREFIX) {
 			return null;
 		}

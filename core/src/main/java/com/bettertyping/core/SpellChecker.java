@@ -14,10 +14,11 @@ import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 /**
- * Checks words against the language dictionary, game names (items, mobs) and the personal dictionary.
+ * Checks words against the language dictionaries, game names (items, mobs) and the personal dictionary.
+ * A word is correct when any of them has it.
  *
- * <p>Any source can be replaced at any time from any thread, e.g. when the dictionary finishes loading.
- * Until a language is set, every word counts as correct and nothing is reported as misspelled.
+ * <p>Any source can be replaced at any time from any thread, e.g. when the dictionaries finish loading.
+ * Until languages are set, every word counts as correct and nothing is reported as misspelled.
  */
 public final class SpellChecker {
 	private static final int MAX_DISTANCE = 2;
@@ -27,13 +28,16 @@ public final class SpellChecker {
 	private static final Comparator<WordList.Candidate> BY_RANK = Comparator.comparingInt(WordList.Candidate::rank);
 
 	/** Every word source in use. Replaced as a whole when one changes, so readers always see a consistent set. */
-	private record Sources(WordList language, WordList gameWords, WordList personal) {
+	private record Sources(List<WordList> languages, WordList gameWords, WordList personal) {
 		boolean isCorrect(String word) {
-			return language == null || language.contains(word) || gameWords.contains(word) || personal.contains(word);
+			return languages == null || lists().stream().anyMatch(list -> list.contains(word));
 		}
 
 		List<WordList> lists() {
-			return language == null ? List.of(gameWords, personal) : List.of(language, gameWords, personal);
+			List<WordList> lists = new ArrayList<>(languages == null ? List.of() : languages);
+			lists.add(gameWords);
+			lists.add(personal);
+			return lists;
 		}
 	}
 
@@ -57,24 +61,25 @@ public final class SpellChecker {
 		this.sources = new Sources(null, WordList.EMPTY, personal.words());
 	}
 
-	public void setLanguage(WordList language) {
-		update(s -> new Sources(language, s.gameWords(), s.personal()));
+	public void setLanguages(List<WordList> languages) {
+		List<WordList> copy = List.copyOf(languages);
+		update(s -> new Sources(copy, s.gameWords(), s.personal()));
 	}
 
 	public void setGameWords(WordList gameWords) {
-		update(s -> new Sources(s.language(), gameWords, s.personal()));
+		update(s -> new Sources(s.languages(), gameWords, s.personal()));
 	}
 
 	/** Adds a word to the personal dictionary. */
 	public synchronized void addPersonalWord(String word) {
 		personal.add(word);
-		update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
+		update(s -> new Sources(s.languages(), s.gameWords(), personal.words()));
 	}
 
 	/** Replaces the personal dictionary's words. Each entry can hold several words separated by spaces. */
 	public synchronized void setPersonalWords(Collection<String> entries) {
 		personal.set(entries);
-		update(s -> new Sources(s.language(), s.gameWords(), personal.words()));
+		update(s -> new Sources(s.languages(), s.gameWords(), personal.words()));
 	}
 
 	/** The personal dictionary's words, lowercase and sorted. */
@@ -87,7 +92,7 @@ public final class SpellChecker {
 	}
 
 	public boolean isReady() {
-		return sources.language() != null;
+		return sources.languages() != null;
 	}
 
 	public boolean isCorrect(String word) {
@@ -97,7 +102,7 @@ public final class SpellChecker {
 	/** The misspelled words of {@code text}. Results are cached until any word source changes. */
 	public synchronized List<WordSpan> misspelled(String text) {
 		Sources current = sources;
-		if (current.language() == null) {
+		if (current.languages() == null) {
 			return List.of();
 		}
 		if (current != cachedFor) {

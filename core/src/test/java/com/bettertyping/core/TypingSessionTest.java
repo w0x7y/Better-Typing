@@ -84,8 +84,8 @@ class TypingSessionTest {
 		checker = new SpellChecker(tmp.resolve("personal.txt"), e -> {
 			throw new AssertionError(e);
 		});
-		checker.setLanguage(WordList.caseSensitive(Map.of(
-			"the", 0, "there", 1, "then", 2, "them", 3, "hello", 4, "help", 5, "world", 6, "word", 7)));
+		checker.setLanguages(List.of(WordList.caseSensitive(Map.of(
+			"the", 0, "there", 1, "then", 2, "them", 3, "hello", 4, "help", 5, "world", 6, "word", 7))));
 		settings = new Settings();
 		session = new TypingSession(checker, settings);
 	}

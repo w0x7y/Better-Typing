@@ -3,7 +3,6 @@ package com.bettertyping.core;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,7 +33,7 @@ class LanguagePacksTest {
 	Path dir;
 
 	private final byte[] pack = jar("de_de.txt", "der\ndie\nHaus\nTür\n");
-	/** The mod's dictionary folder; reading a file whose content is "unreadable" fails. */
+	/** The mod's dictionary folder; reading a file whose content is "unreadable" fails, and "crash" throws. */
 	private final Map<String, String> bundled = new HashMap<>(Map.of("en_us.txt", "the\nhello\n", "en_us.chat.txt", "hello\ngg\n",
 		"chat.txt", "afk\n", "en_gb.txt", "colour\n"));
 	/** What each URL answers; a missing URL fails like a network error. */
@@ -65,6 +64,9 @@ class LanguagePacksTest {
 		String content = bundled.get(file);
 		if ("unreadable".equals(content)) {
 			throw new IOException("Broken " + file);
+		}
+		if ("crash".equals(content)) {
+			throw new IllegalStateException("Bug reading " + file);
 		}
 		return content == null ? null : stream(content);
 	}
@@ -97,23 +99,26 @@ class LanguagePacksTest {
 		}
 	}
 
-	private LanguageDictionary load(String... languages) {
-		return packs.load(List.of(languages), (language, e) -> skipped.add(language)).orElseThrow();
+	private List<LanguageDictionary> load(String... languages) {
+		return packs.load(List.of(languages), (language, e) -> skipped.add(language));
+	}
+
+	private static List<String> codes(List<LanguageDictionary> dictionaries) {
+		return dictionaries.stream().map(LanguageDictionary::language).toList();
 	}
 
 	@Test
-	void loadsTheFirstLanguageThatHasAWordList() {
-		LanguageDictionary english = load("xx_xx", "en_us");
-		assertEquals("en_us", english.language());
+	void loadsEveryLanguageThatHasAWordList() {
+		assertEquals(List.of("en_us", "en_gb"), codes(load("xx_xx", "en_us", "en_gb")));
 		assertEquals(List.of("xx_xx"), skipped);
 	}
 
 	@Test
 	void everyLanguageGetsItsChatWordsAndTheSharedOnes() {
-		LanguageDictionary english = load("en_us");
+		LanguageDictionary english = load("en_us").get(0);
 		assertTrue(english.words().contains("gg"));
 		assertTrue(english.words().contains("afk"));
-		assertTrue(load("en_gb").words().contains("afk"), "a language without its own chat words still gets the shared ones");
+		assertTrue(load("en_gb").get(0).words().contains("afk"), "a language without its own chat words still gets the shared ones");
 	}
 
 	@Test
@@ -122,7 +127,7 @@ class LanguagePacksTest {
 		bundled.put("de_de.rules.txt", "compound.min_part=3\n");
 		web.put(RELEASE, pack);
 		packs.download("de_de");
-		LanguageDictionary german = load("de_de");
+		LanguageDictionary german = load("de_de").get(0);
 		assertTrue(german.words().contains("digga"));
 		assertTrue(german.words().contains("afk"));
 		assertTrue(german.words().contains("Haustür"), "the rules file turns compounds on");
@@ -131,7 +136,14 @@ class LanguagePacksTest {
 	@Test
 	void unreadableLanguageIsSkipped() {
 		bundled.put("en_gb.txt", "unreadable");
-		assertEquals("en_us", load("en_gb", "en_us").language());
+		assertEquals(List.of("en_us"), codes(load("en_gb", "en_us")));
+		assertEquals(List.of("en_gb"), skipped);
+	}
+
+	@Test
+	void languageThatCrashesIsSkippedAlone() {
+		bundled.put("en_gb.rules.txt", "crash");
+		assertEquals(List.of("en_us"), codes(load("en_gb", "en_us")));
 		assertEquals(List.of("en_gb"), skipped);
 	}
 
@@ -147,7 +159,7 @@ class LanguagePacksTest {
 		assertFalse(packs.installed("de_de"));
 		packs.download("de_de");
 		assertTrue(packs.installed("de_de"));
-		LanguageDictionary german = load("de_de");
+		LanguageDictionary german = load("de_de").get(0);
 		assertEquals("de_de", german.language());
 		assertTrue(german.words().contains("Haus"));
 		assertFalse(german.words().contains("haus"));
@@ -213,34 +225,7 @@ class LanguagePacksTest {
 	void bundledLanguagesNeedNoDownload() {
 		assertTrue(packs.installed("en_gb"));
 		assertThrows(IOException.class, () -> packs.download("en_gb"));
-		assertTrue(load("en_gb").words().contains("colour"));
-	}
-
-	@Test
-	void gameLanguagesMapToCatalogLanguages() {
-		assertEquals("en_gb", packs.forGame("en_AU").code());
-		assertEquals("de_de", packs.forGame("de_ch").code());
-		assertEquals("de_de", packs.forGame("de_de").code());
-		assertNull(packs.forGame("pt_pt"));
-	}
-
-	@Test
-	void gameLanguageIsOnlyUsedWhenInstalled() throws IOException {
-		assertEquals(List.of("en_gb", "en_us"), packs.resolve(List.of(LanguagePacks.GAME_LANGUAGE), "en_nz"));
-		assertEquals(List.of("en_us"), packs.resolve(List.of(LanguagePacks.GAME_LANGUAGE), "de_de"));
-		web.put(RELEASE, pack);
-		packs.download("de_de");
-		assertEquals(List.of("de_de", "en_us"), packs.resolve(List.of(LanguagePacks.GAME_LANGUAGE), "de_de"));
-		assertEquals(List.of("en_us"), packs.resolve(List.of("en_us", LanguagePacks.GAME_LANGUAGE), "en_us"));
-	}
-
-	@Test
-	void chosenPackIsUsedOnceDownloaded() throws IOException {
-		assertEquals(List.of("en_us"), packs.resolve(List.of("de_de"), "en_us"));
-		web.put(RELEASE, pack);
-		packs.download("de_de");
-		assertEquals(List.of("de_de", "en_us"), packs.resolve(List.of("de_de"), "en_us"));
-		assertEquals(List.of("en_us"), packs.resolve(List.of("xx_xx", "../de_de"), "en_us"));
+		assertTrue(load("en_gb").get(0).words().contains("colour"));
 	}
 
 	@Test
@@ -249,10 +234,15 @@ class LanguagePacksTest {
 		try (InputStream in = Files.newInputStream(Path.of("../common/src/main/resources/assets/bettertyping/languages.txt"))) {
 			languages = LanguagePacks.readCatalog(in);
 		}
+		String flags = Files.readString(Path.of("../common/src/main/resources/assets/bettertyping/font/flags.json"));
 		assertEquals(List.of("en_us", "en_gb"), languages.stream().filter(l -> l.pack() == null).map(LanguagePacks.Language::code).toList());
 		for (LanguagePacks.Language language : languages) {
 			assertTrue(Files.exists(Path.of("../common/src/main/resources/assets/bettertyping/dictionaries/" + language.code() + ".txt"))
 				!= (language.pack() != null), language.code() + " is either bundled or a pack");
+			String country = language.code().substring(language.code().indexOf('_') + 1);
+			assertTrue(country.matches("[a-z]{2}") && flags.contains("\"file\": \"bettertyping:font/flag/" + country + ".png\", \"height\": 8, \"ascent\": 7, \"chars\": [\"\\u"
+				+ HexFormat.of().toHexDigits(language.flag().charAt(0)) + "\"]"),
+				language.code() + " has its flag in the flags font");
 			if (language.pack() != null) {
 				assertTrue(language.pack().url().toString().matches(
 					"https://github\\.com/w0x7y/Better-Typing/releases/download/languages-[0-9.]+/bettertyping-" + language.code() + "-[0-9.]+\\.jar"),

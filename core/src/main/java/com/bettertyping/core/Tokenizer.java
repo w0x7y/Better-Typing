@@ -6,7 +6,8 @@ import java.util.regex.Pattern;
 
 /** Splits text into checkable words, skipping URLs, emails, numbers and single letters. */
 public final class Tokenizer {
-	private static final Pattern DOMAIN = Pattern.compile(".*[\\p{L}\\d]\\.\\p{L}{2,}.*");
+	// Found anywhere in a chunk; a pattern wrapped in .* backtracks in quadratic time on long chunks from a server.
+	private static final Pattern DOMAIN = Pattern.compile("[\\p{L}\\d]\\.\\p{L}{2}");
 
 	private Tokenizer() {
 	}
@@ -43,9 +44,14 @@ public final class Tokenizer {
 		return null;
 	}
 
-	/** The word that ends exactly at {@code pos}, with no word character right after it, or null. */
-	public static WordSpan wordEndingAt(String text, int pos) {
-		if (pos < text.length() && isWordChar(text, pos)) {
+	/**
+	 * The word being typed: the one ending exactly at the cursor, with no word character right after it.
+	 * Null when there's none or text is selected. It isn't underlined yet, and autocomplete completes it.
+	 */
+	public static WordSpan wordBeingTyped(TextState state) {
+		String text = state.text();
+		int pos = state.cursor();
+		if (state.hasSelection() || (pos < text.length() && isWordChar(text, pos))) {
 			return null;
 		}
 		for (WordSpan word : words(text)) {
@@ -88,9 +94,9 @@ public final class Tokenizer {
 			|| (c >= '\u06D6' && c <= '\u06ED' && Character.getType(c) == Character.NON_SPACING_MARK);
 	}
 
-	static boolean isLinkLike(String chunk) {
+	private static boolean isLinkLike(String chunk) {
 		return chunk.contains("://") || chunk.startsWith("www.") || chunk.indexOf('@') >= 0
-			|| chunk.startsWith("/") || DOMAIN.matcher(chunk).matches();
+			|| chunk.startsWith("/") || DOMAIN.matcher(chunk).find();
 	}
 
 	private static void collectRuns(String text, int from, int to, List<WordSpan> out) {

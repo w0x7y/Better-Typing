@@ -1,7 +1,8 @@
 # Better Typing
 
-Spell check, autocomplete and Ctrl+Z for Minecraft. A client-side Fabric mod that works in chat,
-anvil renaming, signs and books, and draws its suggestions the way vanilla draws command suggestions.
+Spell check, autocomplete and Ctrl+Z for Minecraft, in one language or several at once. A client-side
+Fabric mod that works in chat, anvil renaming, signs and books, and draws its suggestions the way vanilla
+draws command suggestions.
 
 ![Spelling suggestions in chat](gallery:Spelling suggestions)
 
@@ -41,19 +42,21 @@ On macOS, Ctrl is Cmd, like vanilla's copy and paste.
 
 ## Languages
 
-![Picking a language](gallery:Languages)
+![The language list](gallery:Language list)
 
 English with American or British spelling comes with the mod. German, Spanish, French, Italian, Dutch,
 Portuguese (Brazil and Portugal), Swedish, Russian, Hebrew and Arabic are a download each, about 1 MB.
 
-Pick one in the settings and press Save. Only then does the mod connect to the internet: it downloads the
-language from the mod's [GitHub releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.1.0)
-and keeps it only if its SHA-512 matches the one written into the mod. A language you picked is downloaded
+Tick the ones you write in and press Save. A word is correct if any of them knows it, and suggestions and
+autocomplete come from all of them. Only a ticked language that isn't installed makes the mod connect to the
+internet: it downloads the language from the mod's [GitHub releases](https://github.com/w0x7y/Better-Typing/releases/tag/languages-1.1.0)
+and keeps it only if its SHA-512 matches the one written into the mod. A language you ticked is downloaded
 again by itself when a mod update brings a new version of it, and a failed download is tried again when
 you open the settings or restart. You can also put a language's jar in the mods folder like any mod, for a
 modpack or to play offline.
 
-The default, Game language, uses the game's language when it's installed, and American English otherwise.
+The default, Game language, uses the game's language when it's installed, and is what you get with nothing
+ticked. When none of the ticked languages is installed, American English is used.
 
 Every language knows its chat words (hallo, mdr, kkk, סבבה, يلا), plus gaming slang like gg, afk and xD.
 German, Dutch and Swedish also accept compounds made of known words, like Diamantschwert. Item and mob
@@ -67,7 +70,7 @@ Open them with `/bettertyping`, or the config button in Mod Menu.
 
 - Turn spell check, autocomplete and undo/redo on or off.
 - Change the three shortcuts: tick Ctrl, Shift and Alt and pick a key.
-- Pick the language.
+- Tick the languages you write in, each shown with its flag.
 - See and remove the words in your personal dictionary.
 
 ## Coming later

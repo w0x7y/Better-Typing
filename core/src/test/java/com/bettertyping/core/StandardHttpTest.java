@@ -16,12 +16,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** The real {@link LanguagePacks#standardHttp} against a local server. */
+/** The real {@link StandardHttp} against a local server. */
 class StandardHttpTest {
 	private static final byte[] BODY = "word list".getBytes();
 
 	private HttpServer server;
-	private final LanguagePacks.Http http = LanguagePacks.standardHttp("test", Duration.ofSeconds(1));
+	private final LanguagePacks.Http http = new StandardHttp("test", Duration.ofSeconds(1));
 
 	@BeforeEach
 	void start() throws IOException {

@@ -2,8 +2,12 @@ package com.bettertyping.test;
 
 import com.bettertyping.BetterTyping;
 import com.bettertyping.ScreenHooks;
+import com.bettertyping.core.DictionarySelection;
 import com.bettertyping.core.KeyCombo;
-import com.bettertyping.core.LanguagePacks;
+import com.bettertyping.core.TextState;
+import com.bettertyping.core.TypingField;
+import com.bettertyping.field.ScreenFields;
+import com.bettertyping.mixin.AnvilScreenAccessor;
 import com.bettertyping.mixin.BookEditScreenAccessor;
 import com.bettertyping.mixin.ChatScreenAccessor;
 import com.bettertyping.mixin.MultiLineEditBoxAccessor;
@@ -12,11 +16,13 @@ import com.bettertyping.version.Screens;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.isxander.yacl3.api.ListOption;
 import dev.isxander.yacl3.api.Option;
+import dev.isxander.yacl3.api.OptionGroup;
 import dev.isxander.yacl3.gui.YACLScreen;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -25,15 +31,24 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Whence;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
+import net.minecraft.client.gui.screens.inventory.AnvilScreen;
 import net.minecraft.client.gui.screens.inventory.BookEditScreen;
+import net.minecraft.client.gui.screens.inventory.BookSignScreen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 
 /**
- * Plays through chat, a sign and a book in a fresh world, checking the text after each step and
- * saving screenshots of the underlines and popups, then opens the settings screen.
+ * Plays through chat, a sign, a book and its title, and an anvil in a fresh world, checking the text
+ * after each step and saving screenshots of the underlines and popups, then opens the settings screen.
  */
 public class BetterTypingClientGameTest implements FabricClientGameTest {
 	private static final String TEST_WORD = "blorptest";
@@ -46,6 +61,7 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 			chat(context);
 			sign(context, world.getServer());
 			book(context, world.getServer());
+			anvil(context, world.getServer());
 			settings(context);
 		}
 	}
@@ -156,8 +172,51 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 			+ " with somee more wrods so the text wraps arond the page"), "Spelling suggestion in a book, got '" + bookText(context) + "'");
 		ctrl(context, "z");
 		check(bookText(context).startsWith("Ths is a tset"), "Undo in a book");
+		String tooLong = "line\n".repeat(20);
+		context.runOnClient(client -> focusedField(client).apply(TextState.of(tooLong, 0)));
+		check(bookText(context).startsWith("Ths is a tset"), "A book page refuses text past its last line, like typing does");
 
+		// Enter on the focused Sign button opens the signing screen, whose title box is focused.
+		context.runOnClient(client -> {
+			Screen screen = Screens.current(client);
+			for (GuiEventListener child : screen.children()) {
+				if (child instanceof Button button && button.getMessage().getString().equals(I18n.get("book.signButton"))) {
+					screen.setFocused(button);
+				}
+			}
+		});
+		press(context, "enter");
+		context.waitForScreen(BookSignScreen.class);
+		assistedBox(context, "the book title");
 		close(context);
+	}
+
+	private static void anvil(ClientGameTestContext context, TestServerContext server) {
+		// On the floor in front, looking down at it, with nothing in hand to use instead. Anvils fall, so not on the wall.
+		server.runCommand("setblock 0 101 1 air");
+		server.runCommand("setblock 0 100 1 anvil");
+		server.runCommand("tp @a 0.5 100 0.5 0 30");
+		server.runCommand("item replace entity @a weapon.mainhand with air");
+		context.waitTicks(10);
+		context.getInput().pressKey(options -> options.keyUse);
+		context.waitForScreen(AnvilScreen.class);
+		// The name box only takes text with an item to rename, and there's none.
+		context.runOnClient(client -> ((AnvilScreenAccessor) Screens.current(client)).bettertyping$name().setEditable(true));
+		assistedBox(context, "the anvil's name box");
+		close(context);
+	}
+
+	/** Checks that the focused box gets spell check and autocomplete, and that a typed word undoes as one step. */
+	private static void assistedBox(ClientGameTestContext context, String what) {
+		type(context, "teh");
+		check(context.computeOnClient(client -> focusedField(client).assist() && focusedField(client).state().text().equals("teh")),
+			what + " gets spell check and autocomplete");
+		ctrl(context, "z");
+		check(context.computeOnClient(client -> focusedField(client).state().text().isEmpty()), "Undo in " + what);
+	}
+
+	private static TypingField focusedField(Minecraft client) {
+		return ScreenFields.find(Screens.current(client)).focused();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -177,7 +236,7 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		// Turn autocomplete off the way the screen does: set the option, then press Save.
 		context.runOnClient(client -> {
 			YACLScreen screen = (YACLScreen) Screens.current(client);
-			((Option<Boolean>) screen.config.categories().get(0).groups().get(0).options().get(1)).requestSet(false);
+			((Option<Boolean>) option(screen, "autocomplete")).requestSet(false);
 			screen.finishOrSave();
 		});
 		check(!BetterTyping.settings().autocomplete, "Saving the screen applies the change");
@@ -188,34 +247,59 @@ public class BetterTypingClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("bettertyping-13-settings-dictionary");
 		context.runOnClient(client -> {
 			YACLScreen screen = (YACLScreen) Screens.current(client);
-			ListOption<String> words = (ListOption<String>) screen.config.categories().get(1).groups().get(1);
+			ListOption<String> words = (ListOption<String>) group(screen, "personal_dictionary");
 			check(words.pendingValue().contains(TEST_WORD), "The personal dictionary lists added words");
 			words.requestSet(List.of());
 			screen.finishOrSave();
 		});
 		check(!BetterTyping.checker().isCorrect(TEST_WORD), "Removing a word from the list removes it from the dictionary");
 
-		// English (UK) is bundled, so picking it switches the dictionary without a download.
-		setLanguage(context, "en_gb");
+		// English (UK) is bundled, so ticking it switches the dictionary without a download.
+		setLanguages(context, "English (UK)");
 		context.waitFor(client -> BetterTyping.checker().isCorrect("colour") && !BetterTyping.checker().isCorrect("color"));
-		check(true, "Picking English (UK) in the settings loads British spelling");
-		setLanguage(context, LanguagePacks.GAME_LANGUAGE);
-		context.waitFor(client -> BetterTyping.checker().isCorrect("color"));
-		check(true, "Game language goes back to English (US)");
+		check(true, "Ticking only English (UK) in the settings loads British spelling");
+		setLanguages(context, "Game language", "English (UK)");
+		context.waitFor(client -> BetterTyping.checker().isCorrect("colour") && BetterTyping.checker().isCorrect("color"));
+		check(true, "Ticking two languages accepts the words of both");
+		setLanguages(context);
+		context.runOnClient(client -> check(group((YACLScreen) Screens.current(client), "languages").options().stream().noneMatch(Option::changed),
+			"Saving with nothing ticked leaves the screen showing what was saved"));
+		setLanguages(context, "Game language");
+		context.waitFor(client -> BetterTyping.checker().isCorrect("color") && !BetterTyping.checker().isCorrect("colour"));
+		check(settingsFile().lines().anyMatch(line -> line.equals("languages=" + DictionarySelection.GAME_LANGUAGE)), "Game language alone goes back to English (US)");
 
 		BetterTyping.settings().autocomplete = true;
 		BetterTyping.saveSettings();
 		close(context);
 	}
 
-	/** Picks a language on the settings screen's dictionary tab and presses Save. */
+	/** Ticks exactly the languages with these names on the settings screen's dictionary tab and presses Save. */
 	@SuppressWarnings("unchecked")
-	private static void setLanguage(ClientGameTestContext context, String code) {
+	private static void setLanguages(ClientGameTestContext context, String... names) {
 		context.runOnClient(client -> {
 			YACLScreen screen = (YACLScreen) Screens.current(client);
-			((Option<String>) screen.config.categories().get(1).groups().get(0).options().get(0)).requestSet(code);
+			for (Option<?> option : group(screen, "languages").options()) {
+				String name = option.name().getString();
+				((Option<Boolean>) option).requestSet(Arrays.stream(names).anyMatch(name::endsWith));
+			}
 			screen.finishOrSave();
 		});
+	}
+
+	/** The settings group with this key ("languages"), wherever the screen puts it. */
+	private static OptionGroup group(YACLScreen screen, String key) {
+		return screen.config.categories().stream().flatMap(category -> category.groups().stream())
+			.filter(group -> isSetting(group.name(), key)).findFirst().orElseThrow();
+	}
+
+	/** The settings option with this key ("autocomplete"), wherever the screen puts it. */
+	private static Option<?> option(YACLScreen screen, String key) {
+		return screen.config.categories().stream().flatMap(category -> category.groups().stream())
+			.flatMap(group -> group.options().stream()).filter(option -> isSetting(option.name(), key)).findFirst().orElseThrow();
+	}
+
+	private static boolean isSetting(Component name, String key) {
+		return name.getContents() instanceof TranslatableContents text && text.getKey().equals("bettertyping.settings." + key);
 	}
 
 	private static void removePersonalWord(String word) {
