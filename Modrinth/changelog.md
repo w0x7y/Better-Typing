@@ -1,10 +1,6 @@
-- Hebrew, Arabic, Russian and Portuguese (Portugal) can be downloaded too
-- Every language has its own chat words (hallo, mdr, kkk, סבבה, يلا), on top of gaming slang like gg and afk
-- German, Dutch and Swedish accept compound words made of known words, like Diamantschwert
-- xD counts as correct
-- Arabic and Hebrew words keep working with vowel marks typed in, and Hebrew acronyms like צה"ל count as one word
-- "dont" suggests "don't" first, and words with an apostrophe (aujourd'hui) show up in suggestions and autocomplete
-- Dutch capitals work with IJ (IJsland, IJs), and German, Dutch and French no longer suggest words in all capitals
-- A chosen language whose download failed is tried again when you open the settings or restart, and a stuck download gives up after two minutes
-- German accepts words spelled with ß (weiß, groß, Straße), which the first German pack missed
-- Language packs are updated to 1.1.0 and downloaded again automatically
+- Use several languages at once: tick every language you write in, and a word is correct if any of them knows it. Corrections and autocomplete come from all of them
+- Every language in the settings shows its flag
+- With nothing ticked you get Game language, and English (US) is used until one of your languages is installed
+- A language that can't be read falls back to English (US) instead of leaving spell check off
+- Accepting a suggestion or undoing in a book no longer pushes text past the last line of the page
+- A long run of text without spaces, like a pasted book page, no longer slows down every frame

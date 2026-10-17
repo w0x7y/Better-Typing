@@ -1,7 +1,9 @@
 """Preview the Modrinth project page; use --apply to upload the icon and gallery and update the summary, body and license.
 
 Gallery images are matched by title: ones already on the page only get their description updated, so
-running it twice doesn't upload duplicates. In Modrinth/description.md, `gallery:<title>` stands for that image's URL.
+running it twice doesn't upload duplicates. gallery.json is the whole gallery, so an image it no longer lists
+is removed; to replace an image, give it a new title. In Modrinth/description.md, `gallery:<title>` stands
+for that image's URL.
 """
 
 import argparse
@@ -75,6 +77,11 @@ def apply(project: dict, gallery: list[dict], body: str, token: str, root: Path 
         })
         request("POST", f"/project/{slug}/gallery?{query}", token, (root / item["file"]).read_bytes(), "image/png")
         print(f"Uploaded {item['file']} as \"{item['title']}\"")
+    titles = {item["title"] for item in gallery}
+    for image in live["gallery"]:
+        if image["title"] not in titles:
+            request("DELETE", f"/project/{slug}/gallery?{urllib.parse.urlencode({'url': image['url']})}", token)
+            print(f"Removed \"{image['title']}\", which gallery.json no longer lists")
     urls = {image["title"]: image["url"] for image in request("GET", f"/project/{slug}", token)["gallery"]}
     body = GALLERY_LINK.sub(lambda match: f"({urls[match.group(1)]})", body)
     payload = json.dumps({"description": project["summary"], "body": body, "license_id": project["license"]}).encode("utf-8")
