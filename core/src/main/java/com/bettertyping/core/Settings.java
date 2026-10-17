@@ -19,8 +19,8 @@ public final class Settings {
 	public KeyCombo undoKey = KeyCombo.parse("ctrl+z");
 	public KeyCombo redoKey = KeyCombo.parse("ctrl+shift+z");
 	public KeyCombo redoAltKey = KeyCombo.parse("ctrl+y");
-	/** Dictionary languages, tried in order; {@link LanguagePacks#GAME_LANGUAGE} follows the game's language. */
-	public List<String> languages = new ArrayList<>(List.of(LanguagePacks.GAME_LANGUAGE));
+	/** Dictionary languages, all used at once; {@link DictionarySelection#GAME_LANGUAGE} follows the game's language. */
+	public List<String> languages = new ArrayList<>(List.of(DictionarySelection.GAME_LANGUAGE));
 
 	public static Settings load(Path file) throws IOException {
 		Settings settings = new Settings();

@@ -2,7 +2,9 @@ package com.bettertyping.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +26,7 @@ class TokenizerTest {
 	@Test
 	void skipsNumbersSingleLettersAndLinks() {
 		assertEquals(List.of("see"), words("a 42 abc123 x_y see https://example.com www.test.org me@mail.com play.hypixel.net"));
+		assertEquals(List.of("see", "it", "version"), words("see readme.md it, version 1.2."), "a file name is skipped, a number isn't a link");
 	}
 
 	@Test
@@ -48,6 +51,13 @@ class TokenizerTest {
 		assertEquals(new WordSpan(3, 8, "there"), word);
 	}
 
+	/** Text from a server, like a book page, is tokenized every frame, so a long chunk must stay cheap. */
+	@Test
+	void longChunkIsCheckedForLinksInLinearTime() {
+		String chunk = "a." + "b".repeat(64_000) + "\u0085";
+		assertTimeoutPreemptively(Duration.ofSeconds(1), () -> Tokenizer.words(chunk));
+	}
+
 	@Test
 	void findsWordAtCursor() {
 		assertEquals("there", Tokenizer.wordAt("hi there you", 5).text());
@@ -56,9 +66,10 @@ class TokenizerTest {
 	}
 
 	@Test
-	void findsWordEndingAtCursorOnlyAtItsEnd() {
-		assertEquals("ther", Tokenizer.wordEndingAt("hi ther", 7).text());
-		assertNull(Tokenizer.wordEndingAt("hi there", 6));
-		assertNull(Tokenizer.wordEndingAt("hi there ", 9));
+	void wordBeingTypedEndsAtTheCursor() {
+		assertEquals("ther", Tokenizer.wordBeingTyped(TextState.of("hi ther", 7)).text());
+		assertNull(Tokenizer.wordBeingTyped(TextState.of("hi there", 6)));
+		assertNull(Tokenizer.wordBeingTyped(TextState.of("hi there ", 9)));
+		assertNull(Tokenizer.wordBeingTyped(new TextState("hi ther", 7, 3)), "nothing is being typed over a selection");
 	}
 }

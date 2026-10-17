@@ -1,5 +1,6 @@
 package com.bettertyping;
 
+import com.bettertyping.core.DictionarySelection;
 import com.bettertyping.core.KeyCombo;
 import com.bettertyping.core.LanguagePacks;
 import com.bettertyping.core.Settings;
@@ -10,7 +11,7 @@ import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.OptionGroup;
 import dev.isxander.yacl3.api.YetAnotherConfigLib;
-import dev.isxander.yacl3.api.controller.CyclingListControllerBuilder;
+import dev.isxander.yacl3.api.controller.BooleanControllerBuilder;
 import dev.isxander.yacl3.api.controller.DropdownStringControllerBuilder;
 import dev.isxander.yacl3.api.controller.StringControllerBuilder;
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder;
@@ -30,7 +31,8 @@ public final class SettingsScreen {
 	}
 
 	public static Screen create(Screen parent) {
-		Languages.retryFailed();
+		// A download that failed is tried again whenever the settings open.
+		Languages.choose();
 		Settings settings = BetterTyping.settings();
 		Settings defaults = new Settings();
 		return YetAnotherConfigLib.createBuilder()
@@ -46,10 +48,13 @@ public final class SettingsScreen {
 				.build())
 			.category(ConfigCategory.createBuilder()
 				.name(text("dictionary"))
-				.option(language(settings))
+				.group(languages(settings))
 				.group(personalDictionary(BetterTyping.checker()))
 				.build())
-			.save(BetterTyping::saveSettings)
+			.save(() -> {
+				Languages.choose();
+				BetterTyping.saveSettings();
+			})
 			.build()
 			.generateScreen(parent);
 	}
@@ -96,27 +101,39 @@ public final class SettingsScreen {
 	}
 
 	/**
-	 * Which language's words to use: the game's language or one from the catalog. Saving a language that
-	 * isn't installed downloads it.
+	 * Which languages' words to use, one tick box each: the game's language and the catalog's. Saving with
+	 * a language that isn't installed downloads it.
 	 */
-	private static Option<String> language(Settings settings) {
-		Supplier<String> current = () -> settings.languages.isEmpty() ? LanguagePacks.GAME_LANGUAGE : settings.languages.get(0);
+	private static OptionGroup languages(Settings settings) {
 		List<String> choices = new ArrayList<>();
-		choices.add(LanguagePacks.GAME_LANGUAGE);
+		choices.add(DictionarySelection.GAME_LANGUAGE);
 		for (LanguagePacks.Language language : Languages.packs().languages()) {
 			choices.add(language.code());
 		}
-		if (!choices.contains(current.get())) {
-			// Set by hand in settings.properties; keep it selectable.
-			choices.add(current.get());
+		for (String code : settings.languages) {
+			if (!choices.contains(code)) {
+				// Set by hand in settings.properties; keep it selectable.
+				choices.add(code);
+			}
 		}
-		return Option.<String>createBuilder()
-			.name(text("language"))
-			.description(OptionDescription.of(text("language.description")))
-			.binding(LanguagePacks.GAME_LANGUAGE, current, Languages::choose)
-			// Labels are worked out as they're drawn, so a finished download stops saying "download".
-			.controller(option -> CyclingListControllerBuilder.create(option).values(choices).formatValue(Languages::label))
-			.build();
+		OptionGroup.Builder group = OptionGroup.createBuilder()
+			.name(text("languages"))
+			.description(OptionDescription.of(text("languages.description")));
+		for (String code : choices) {
+			group.option(Option.<Boolean>createBuilder()
+				.name(Languages.name(code))
+				.description(OptionDescription.of(text("languages.description")))
+				.binding(code.equals(DictionarySelection.GAME_LANGUAGE), () -> settings.languages.contains(code), on -> {
+					settings.languages.remove(code);
+					if (on) {
+						settings.languages.add(code);
+					}
+				})
+				// Worked out as it's drawn, so a finished download stops saying "download".
+				.controller(option -> BooleanControllerBuilder.create(option).formatValue(on -> Languages.status(code, on)))
+				.build());
+		}
+		return group.build();
 	}
 
 	/** The personal dictionary as an editable list. Saving replaces its words with the list. */

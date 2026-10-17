@@ -37,7 +37,7 @@ class SettingsTest {
 		Settings loaded = Settings.load(file);
 		assertTrue(Files.exists(file));
 		assertTrue(loaded.autocomplete);
-		assertEquals(List.of(LanguagePacks.GAME_LANGUAGE), loaded.languages);
+		assertEquals(List.of(DictionarySelection.GAME_LANGUAGE), loaded.languages);
 	}
 
 	@Test
@@ -48,7 +48,7 @@ class SettingsTest {
 		assertTrue(loaded.spellCheck, "\"yes\" isn't a boolean");
 		assertFalse(loaded.autocomplete);
 		assertEquals(new Settings().undoKey, loaded.undoKey);
-		assertEquals(List.of(LanguagePacks.GAME_LANGUAGE), loaded.languages);
+		assertEquals(List.of(DictionarySelection.GAME_LANGUAGE), loaded.languages);
 	}
 
 	@Test

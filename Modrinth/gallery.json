@@ -14,13 +14,13 @@
   {
     "file": "assets/settings.png",
     "title": "Settings",
-    "description": "Open with /bettertyping or from Mod Menu: turn features on or off, change the shortcuts, pick the language and edit your personal dictionary.",
+    "description": "Open with /bettertyping or from Mod Menu: turn features on or off, change the shortcuts, tick your languages and edit your personal dictionary.",
     "featured": false
   },
   {
     "file": "assets/languages.png",
-    "title": "Languages",
-    "description": "English (US and UK) comes with the mod. Pick German, Spanish, French, Italian, Dutch, Portuguese, Swedish, Russian, Hebrew or Arabic and it's downloaded, about 1 MB each.",
+    "title": "Language list",
+    "description": "Tick every language you write in. English (US and UK) comes with the mod. German, Spanish, French, Italian, Dutch, Portuguese, Swedish, Russian, Hebrew and Arabic are downloaded when ticked, about 1 MB each.",
     "featured": false
   }
 ]

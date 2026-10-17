@@ -1,0 +1,19 @@
+{
+	"providers": [
+		{"type": "bitmap", "file": "bettertyping:font/flag/world.png", "height": 8, "ascent": 7, "chars": ["\ue2a4"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/us.png", "height": 8, "ascent": 7, "chars": ["\ue21a"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/gb.png", "height": 8, "ascent": 7, "chars": ["\ue09d"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/sa.png", "height": 8, "ascent": 7, "chars": ["\ue1d4"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/de.png", "height": 8, "ascent": 7, "chars": ["\ue052"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/es.png", "height": 8, "ascent": 7, "chars": ["\ue07a"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/fr.png", "height": 8, "ascent": 7, "chars": ["\ue093"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/il.png", "height": 8, "ascent": 7, "chars": ["\ue0db"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/it.png", "height": 8, "ascent": 7, "chars": ["\ue0e3"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/nl.png", "height": 8, "ascent": 7, "chars": ["\ue15d"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/br.png", "height": 8, "ascent": 7, "chars": ["\ue02b"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/pt.png", "height": 8, "ascent": 7, "chars": ["\ue199"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/ru.png", "height": 8, "ascent": 7, "chars": ["\ue1ce"]},
+		{"type": "bitmap", "file": "bettertyping:font/flag/se.png", "height": 8, "ascent": 7, "chars": ["\ue1d8"]},
+		{"type": "reference", "id": "minecraft:default"}
+	]
+}

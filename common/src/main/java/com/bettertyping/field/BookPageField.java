@@ -38,8 +38,12 @@ record BookPageField(MultiLineEditBox box, int page, boolean assist) implements 
 
 	@Override
 	public void apply(TextState state) {
-		box.setValue(state.text(), true);
+		// Like typing, refuses text that runs past the page's last line.
+		box.setValue(state.text(), false);
 		MultilineTextField field = textField();
+		if (!field.value().equals(state.text())) {
+			return;
+		}
 		field.setSelecting(false);
 		field.seekCursor(Whence.ABSOLUTE, state.anchor());
 		field.setSelecting(true);

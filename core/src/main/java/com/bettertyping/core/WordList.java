@@ -120,12 +120,12 @@ public final class WordList {
 	 * chat word ranks at least as high as the dictionary's (n * {@value #CHAT_SPACING})-th word. Chat words
 	 * the dictionary lacks ("gg", "afk") count as correct. Blank lines and {@code #} comments are skipped.
 	 */
-	public static WordList language(InputStream dictionary, InputStream chatWords) throws IOException {
+	static WordList language(InputStream dictionary, InputStream chatWords) throws IOException {
 		return language(dictionary, chatWords, Compounds.NONE);
 	}
 
 	/** {@link #language(InputStream, InputStream)} for a language that joins words into compounds. */
-	public static WordList language(InputStream dictionary, InputStream chatWords, Compounds compounds) throws IOException {
+	static WordList language(InputStream dictionary, InputStream chatWords, Compounds compounds) throws IOException {
 		Map<String, Integer> ranks = readRanked(dictionary);
 		int position = 0;
 		for (String word : readLines(chatWords)) {
@@ -159,7 +159,7 @@ public final class WordList {
 		return lines;
 	}
 
-	public static WordList caseSensitive(Map<String, Integer> ranks) {
+	static WordList caseSensitive(Map<String, Integer> ranks) {
 		return new WordList(ranks, true, Compounds.NONE);
 	}
 

@@ -1,9 +1,10 @@
 package com.bettertyping.version;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.gui.screens.Screen;
 
-/** From 26.2 the open screen lives in Gui. */
+/** From 26.2 the open screen and the toasts live in Gui. */
 public final class Screens {
 	private Screens() {
 	}
@@ -14,5 +15,9 @@ public final class Screens {
 
 	public static void open(Minecraft client, Screen screen) {
 		client.gui.setScreen(screen);
+	}
+
+	public static ToastManager toasts(Minecraft client) {
+		return client.gui.toastManager();
 	}
 }

@@ -32,8 +32,9 @@ public record ScreenFields(List<TypingField> all, TypingField focused) {
 	public static ScreenFields find(Screen screen) {
 		if (screen instanceof AbstractSignEditScreen sign) {
 			// Sign screens send every key to the current line, whatever widget has focus.
-			List<TypingField> lines = new ArrayList<>(4);
-			for (int i = 0; i < 4; i++) {
+			int count = ((SignEditScreenAccessor) sign).bettertyping$messages().length;
+			List<TypingField> lines = new ArrayList<>(count);
+			for (int i = 0; i < count; i++) {
 				lines.add(new SignLineField(sign, i, true));
 			}
 			return new ScreenFields(lines, lines.get(((SignEditScreenAccessor) sign).bettertyping$line()));
